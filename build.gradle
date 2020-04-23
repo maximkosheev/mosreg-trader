@@ -1,0 +1,37 @@
+repositories {
+    mavenCentral()
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'application'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+group = 'ru.mosterdev'
+mainClassName = 'ru.monsterdev.mosregtrader.MosregTraderApplication'
+version = '1.0'
+
+dependencies {
+    compile 'org.projectlombok:lombok:1.18.2'
+    compile group: 'org.springframework.boot', name: 'spring-boot-starter', version: '2.2.6.RELEASE'
+    compile group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa', version: '2.2.6.RELEASE'
+    compile group: 'com.h2database', name: 'h2', version: '1.4.197'
+    compile group: 'org.flywaydb', name: 'flyway-core', version: '6.4.0'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.8.1'
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    compile group: 'com.google.guava', name: 'guava', version: '19.0'
+    compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.6'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.8'
+    compile files('c:/JCP/JCP.jar')
+    compile files('c:/JCP/CAdES.jar')
+    compile files('c:/JCP/AdES-core.jar')
+    compile group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.50'
+    compile group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.50'
+    testCompile group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '2.2.6.RELEASE'
+}
