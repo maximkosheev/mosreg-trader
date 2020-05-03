@@ -12,6 +12,7 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 import lombok.Data;
 import ru.monsterdev.mosregtrader.enums.FilterType;
+import ru.monsterdev.mosregtrader.utils.StringUtil;
 
 @Data
 @Entity
@@ -20,7 +21,7 @@ public class FilterOption {
 
   @Id
   @GeneratedValue(strategy = GenerationType.AUTO)
-  private int id;
+  private Integer id;
 
   @Column(name = "name")
   private String name;
@@ -31,6 +32,10 @@ public class FilterOption {
 
   @Column(name = "options")
   private String options;
+
+  public static String prepareString(String text) {
+    return StringUtil.removeAll(StringUtil.removeWhitespaces(text), ";", "=");
+  }
 
   public Map<String, String> getFields() {
     Map<String, String> fields = new HashMap<>();
@@ -54,10 +59,4 @@ public class FilterOption {
   public String toString() {
     return name;
   }
-
-    /*
-    public static String prepareString(String string)  {
-        return StringUtil.removeAll(StringUtil.removeWhitespaces(string), ";", "=");
-    }
-    */
 }

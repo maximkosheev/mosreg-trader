@@ -5,7 +5,7 @@
 <?import java.lang.*?>
 <?import javafx.scene.control.*?>
 
-<VBox fx:id="rootPane" alignment="TOP_RIGHT" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="355.0" prefWidth="450.0" spacing="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.monsterdev.automosreg.ui.CertificateListController">
+<VBox fx:id="rootPane" alignment="TOP_RIGHT" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="355.0" prefWidth="450.0" spacing="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.monsterdev.mosregtrader.ui.CertificateListController">
    <children>
       <TableView fx:id="tblCertificates" prefHeight="350.0" prefWidth="521.0">
       </TableView>

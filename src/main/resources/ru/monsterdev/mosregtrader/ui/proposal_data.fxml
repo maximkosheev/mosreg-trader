@@ -5,7 +5,7 @@
 <?import java.lang.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox fx:id="rootPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="245.0" prefWidth="403.0" spacing="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.monsterdev.automosreg.ui.ProposalController">
+<VBox fx:id="rootPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="245.0" prefWidth="403.0" spacing="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.monsterdev.mosregtrader.ui.ProposalController">
    <children>
       <Label text="Минимальное предложение цены (МПЦ) (р.)*" VBox.vgrow="NEVER" />
       <TextField fx:id="edtMinTradeVal" promptText="МПЦ" VBox.vgrow="NEVER" />

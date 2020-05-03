@@ -23,8 +23,11 @@ import org.apache.commons.cli.ParseException;
 import org.h2.tools.Server;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import ru.monsterdev.mosregtrader.events.ShowUIEvent;
 import ru.monsterdev.mosregtrader.exceptions.MosregTraderException;
 import ru.monsterdev.mosregtrader.ui.UIComponent;
+import ru.monsterdev.mosregtrader.ui.UIDispatcher;
 import ru.monsterdev.mosregtrader.utils.CipherUtil;
 import ru.monsterdev.mosregtrader.utils.LicenseUtil;
 
@@ -32,28 +35,18 @@ import ru.monsterdev.mosregtrader.utils.LicenseUtil;
 @SpringBootApplication
 public class MosregTraderApplication extends AbstractApplication {
 
-  private static MosregTraderApplication instance = null;
   private static Server db;
 
   @Autowired
-  private UIComponent mainView;
+  private UIDispatcher uiDispatcher;
 
   @Override
   public void start(Stage primaryStage) throws Exception {
-    MosregTraderApplication.instance = this;
-    primaryStage.setScene(new Scene(mainView.getView()));
-    primaryStage.show();
+    uiDispatcher.setPrimaryStage(primaryStage);
     primaryStage.setOnCloseRequest(event -> {
       db.stop();
     });
-  }
-
-  public static MosregTraderApplication getInstance() {
-    return instance;
-  }
-
-  public static URL getResource(String name) {
-    return instance.getClass().getResource(name);
+    uiDispatcher.showLoginUI();
   }
 
   public static int work_thread_timeout;

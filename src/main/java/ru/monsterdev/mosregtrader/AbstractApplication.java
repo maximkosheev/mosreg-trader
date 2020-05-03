@@ -1,6 +1,7 @@
 package ru.monsterdev.mosregtrader;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
@@ -11,8 +12,10 @@ public abstract class AbstractApplication extends Application {
 
   @Override
   public void init() throws Exception {
-    applicationContext = SpringApplication.run(getClass(), args);
-    applicationContext.getAutowireCapableBeanFactory().autowireBean(this);
+    Platform.runLater(() -> {
+      applicationContext = SpringApplication.run(getClass(), args);
+      applicationContext.getAutowireCapableBeanFactory().autowireBean(this);
+    });
   }
 
   @Override
