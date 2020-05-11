@@ -1,19 +1,17 @@
 package ru.monsterdev.mosregtrader.ui;
 
 import java.math.RoundingMode;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.stream.Collectors;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -45,7 +43,7 @@ import ru.monsterdev.mosregtrader.services.DictionaryService;
 import ru.monsterdev.mosregtrader.tasks.GetFilteredTradesTask;
 import ru.monsterdev.mosregtrader.ui.control.MultilineCellFactory;
 import ru.monsterdev.mosregtrader.ui.control.WaitIndicator;
-import ru.monsterdev.mosregtrader.ui.model.TradeItem;
+import ru.monsterdev.mosregtrader.ui.model.TradeViewItem;
 import ru.monsterdev.mosregtrader.utils.StringUtil;
 
 @Slf4j
@@ -88,7 +86,7 @@ public class TradeFilterController extends AbstractUIController {
   @FXML
   private ComboBox<FilterOption> cmbFilters;
   @FXML
-  private TableView<TradeItem> tblTrades;
+  private TableView<TradeViewItem> tblTrades;
   @FXML
   private Pagination pagination;
   @FXML
@@ -107,6 +105,8 @@ public class TradeFilterController extends AbstractUIController {
   private boolean isOK = false;
 
   private ChangeListener<Number> currentPageChangeListener;
+
+  List<TradeInfoDto> selectedTrades = new ArrayList<>();
 
   @Override
   public void bootstrap() {
@@ -137,47 +137,47 @@ public class TradeFilterController extends AbstractUIController {
     chbSelectAll.selectedProperty().addListener((observable, oldValue, newValue) ->
         tblTrades.getItems().forEach(trade -> trade.setSelected(newValue)));
 
-    TableColumn<TradeItem, Boolean> c0 = new TableColumn<>("");
+    TableColumn<TradeViewItem, Boolean> c0 = new TableColumn<>("");
     c0.setCellValueFactory(new PropertyValueFactory<>("selected"));
     c0.setCellFactory(CheckBoxTableCell.forTableColumn(c0));
     c0.setGraphic(chbSelectAll);
     c0.setPrefWidth(34);
 
-    TableColumn<TradeItem, Long> c1 = new TableColumn<>("Номер\nзакупки");
+    TableColumn<TradeViewItem, Long> c1 = new TableColumn<>("Номер\nзакупки");
     c1.setCellValueFactory(new PropertyValueFactory<>("id"));
     c1.setStyle("-fx-alignment: CENTER;");
     c1.prefWidthProperty().bind(tblTrades.widthProperty().subtract(34).multiply(0.05));
 
-    TableColumn<TradeItem, String> c2 = new TableColumn<>("Заказчик");
+    TableColumn<TradeViewItem, String> c2 = new TableColumn<>("Заказчик");
     c2.setCellValueFactory(new PropertyValueFactory<>("customer"));
     c2.setCellFactory(new MultilineCellFactory());
     c2.prefWidthProperty().bind(tblTrades.widthProperty().subtract(34).multiply(0.337));
 
-    TableColumn<TradeItem, String> c3 = new TableColumn<>("Наименование закупки");
+    TableColumn<TradeViewItem, String> c3 = new TableColumn<>("Наименование закупки");
     c3.setCellValueFactory(new PropertyValueFactory<>("name"));
     c3.setCellFactory(new MultilineCellFactory());
     c3.prefWidthProperty().bind(tblTrades.widthProperty().subtract(34).multiply(0.305));
 
-    TableColumn<TradeItem, String> c4 = new TableColumn<>("НМЦ");
+    TableColumn<TradeViewItem, String> c4 = new TableColumn<>("НМЦ");
     c4.setCellValueFactory(new PropertyValueFactory<>("initialPrice"));
     c4.setCellValueFactory(
         param -> new SimpleStringProperty(param.getValue().getInitialPrice().setScale(2, RoundingMode.UP).toString()));
     c4.setStyle("-fx-alignment: CENTER;");
     c4.prefWidthProperty().bind(tblTrades.widthProperty().subtract(34).multiply(0.05));
 
-    TableColumn<TradeItem, String> c5 = new TableColumn<>("Дата и время\nначала подачи\nпредложений");
+    TableColumn<TradeViewItem, String> c5 = new TableColumn<>("Дата и время\nначала подачи\nпредложений");
     c5.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getPublicationDate().format(onlyDate)));
     c5.setStyle("-fx-alignment: CENTER;");
     c5.prefWidthProperty().bind(tblTrades.widthProperty().subtract(34).multiply(0.073));
 
-    TableColumn<TradeItem, String> c6 = new TableColumn<>("Дата и время\nокончания подачи\nпредложений");
+    TableColumn<TradeViewItem, String> c6 = new TableColumn<>("Дата и время\nокончания подачи\nпредложений");
     c6.setCellValueFactory(new PropertyValueFactory<>("fillingApplicationEndDate"));
     c6.setCellValueFactory(
         param -> new SimpleStringProperty(param.getValue().getFillingApplicationEndDate().format(withTime)));
     c6.setStyle("-fx-alignment: CENTER;");
     c6.prefWidthProperty().bind(tblTrades.widthProperty().subtract(34).multiply(0.073));
 
-    TableColumn<TradeItem, String> c7 = new TableColumn<>("Статус");
+    TableColumn<TradeViewItem, String> c7 = new TableColumn<>("Статус");
     c7.setCellValueFactory(new PropertyValueFactory<>("stateName"));
     c7.setStyle("-fx-alignment: CENTER;");
     c7.prefWidthProperty().bind(tblTrades.widthProperty().subtract(34).multiply(0.097));
@@ -190,7 +190,11 @@ public class TradeFilterController extends AbstractUIController {
   }
 
   public List<TradeInfoDto> getTrades() {
-    return Collections.emptyList();
+    if (isOK) {
+      return selectedTrades;
+    } else {
+      return null;
+    }
   }
 
   private void doFilter(int page) {
@@ -240,9 +244,9 @@ public class TradeFilterController extends AbstractUIController {
     filteringTask.setOnSucceeded(event1 -> {
       releaseUI();
       TradesInfoDto tradesInfoList = filteringTask.getValue();
-      ObservableList<TradeItem> items = FXCollections.observableArrayList();
+      ObservableList<TradeViewItem> items = FXCollections.observableArrayList();
       for (TradeInfoDto tradeInfo : tradesInfoList.getTrades()) {
-        items.add(new TradeItem(tradeInfo));
+        items.add(new TradeViewItem(tradeInfo));
       }
       tblTrades.setItems(items);
       lblTradesCount.setText(String.valueOf(tradesInfoList.getTotalrecords()));
@@ -313,7 +317,13 @@ public class TradeFilterController extends AbstractUIController {
 
   @FXML
   private void onOk() {
-    if (tblTrades.getItems().stream().noneMatch(TradeItem::isSelected)) {
+    selectedTrades.clear();
+    selectedTrades.addAll(tblTrades.getItems().stream()
+        .filter(TradeViewItem::isSelected)
+        .map(TradeViewItem::getInfo)
+        .collect(Collectors.toList())
+    );
+    if (selectedTrades.isEmpty()) {
       UIController.showErrorMessage("Не выбрано ни одной закупки");
       return;
     }

@@ -7,6 +7,8 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Optional;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -39,12 +41,14 @@ import ru.monsterdev.mosregtrader.exceptions.MosregTraderException;
 import ru.monsterdev.mosregtrader.model.ProposalData;
 import ru.monsterdev.mosregtrader.model.StatusFilterOption;
 import ru.monsterdev.mosregtrader.model.dto.TradeInfoDto;
+import ru.monsterdev.mosregtrader.repositories.TradeRepository;
 import ru.monsterdev.mosregtrader.services.DictionaryService;
+import ru.monsterdev.mosregtrader.services.TradeService;
 import ru.monsterdev.mosregtrader.services.UserService;
 import ru.monsterdev.mosregtrader.ui.control.WaitIndicator;
 
 @Slf4j
-public class MainController extends AbstractUIController {
+public class MainController extends AbstractUIController implements Observer {
 
   private static final String ERROR_COMMON_LOG_MSG = "Failed to complete operation due error %s : %s";
   private static final String PENDING_MSG = "Ожидайте, идет обновление...";
@@ -97,12 +101,16 @@ public class MainController extends AbstractUIController {
 
   private Map<String, Object> filterOptions = new Hashtable<>();
 
-  /*
-  private Timeline timeline = new Timeline(new KeyFrame(
-      Duration.millis(UPDATE_MAIN_VIEW_TICK),
-      event -> refreshProposals(filterOptions)
-  ));
-  */
+  @Autowired
+  private TradeService tradeService;
+
+  @Autowired
+  private TradeRepository tradeRepository;
+
+  @Override
+  public void initialize() {
+    tradeRepository.addObserver(this);
+  }
 
   @Override
   public void bootstrap() {
@@ -208,6 +216,11 @@ public class MainController extends AbstractUIController {
     }
   }
 
+  @Override
+  public void update(Observable o, Object arg) {
+    doApplyFilter();
+  }
+
   @FXML
   private void onFileClose() {
     Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
@@ -251,11 +264,8 @@ public class MainController extends AbstractUIController {
         trade.setMinTradeVal(proposalData.getMinTradeVal());
         trade.setStartPrice(Objects.isNull(proposalData.getStartTradeVal()) ? tradeInfo.getInitialPrice()
             : proposalData.getStartTradeVal());
-        //trade.getTradeProducts().addAll(productsService.getProductsForTrade(tradeInfo.getId()));
-        //userService.getCurrentUser().addTrade(trade);
+        tradeService.addTrade(trade);
       }
-      //userService.update();
-      doApplyFilter();
     } catch (Throwable t) {
       log.error(String.format(ERROR_COMMON_LOG_MSG, t.getClass(), t.getMessage()));
       UIController.showErrorMessage(t.getMessage());

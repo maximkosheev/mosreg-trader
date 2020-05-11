@@ -121,7 +121,7 @@ public class Trade {
   @Transient
   private Set<TradeProduct> tradeProducts = new HashSet<>();
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne
   @JoinColumn(name = "user_id")
   private User user;
 

@@ -11,11 +11,11 @@ import ru.monsterdev.mosregtrader.model.dto.TradeInfoDto;
  * Класс хранит информацию о закупке, необходимую для работы UI,
  * но которую не требуется хранить в бд
  */
-public class TradeItem {
+public class TradeViewItem {
     private BooleanProperty selected;
     private TradeInfoDto tradeInfo;
 
-    public TradeItem(TradeInfoDto tradeInfo) {
+    public TradeViewItem(TradeInfoDto tradeInfo) {
         this.selected = new SimpleBooleanProperty(false);
         this.tradeInfo = tradeInfo;
     }

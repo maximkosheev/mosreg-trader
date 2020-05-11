@@ -6,12 +6,12 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.util.Callback;
-import ru.monsterdev.mosregtrader.ui.model.TradeItem;
+import ru.monsterdev.mosregtrader.ui.model.TradeViewItem;
 
-public class MultilineCellFactory implements Callback<TableColumn<TradeItem, String>, TableCell<TradeItem, String>> {
+public class MultilineCellFactory implements Callback<TableColumn<TradeViewItem, String>, TableCell<TradeViewItem, String>> {
     @Override
-    public TableCell<TradeItem, String> call(TableColumn<TradeItem, String> param) {
-        final TableCell<TradeItem, String> cell = new TableCell<TradeItem, String>() {
+    public TableCell<TradeViewItem, String> call(TableColumn<TradeViewItem, String> param) {
+        final TableCell<TradeViewItem, String> cell = new TableCell<TradeViewItem, String>() {
             private Text text = null;
             private static final int PADDING = 10;
 
