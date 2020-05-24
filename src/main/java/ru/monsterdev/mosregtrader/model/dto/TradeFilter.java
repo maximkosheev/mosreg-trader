@@ -8,8 +8,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
-import ru.monsterdev.mosregtrader.utils.converters.LocalDateTimeDeserializer;
-import ru.monsterdev.mosregtrader.utils.converters.LocalDateTimeSerializer;
+import ru.monsterdev.mosregtrader.enums.SourcePlatformType;
+import ru.monsterdev.mosregtrader.utils.converters.DateDeserializers;
+import ru.monsterdev.mosregtrader.utils.converters.DateSerializers;
 
 @Data
 @JsonInclude(Include.NON_EMPTY)
@@ -24,23 +25,23 @@ public class TradeFilter {
   private String customerFullNameOrInn;
 
   @JsonProperty("FilterDateFrom")
-  @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-  @JsonSerialize(using = LocalDateTimeSerializer.class)
+  @JsonDeserialize(using = DateDeserializers.LocalDateTimeDeserializer.class)
+  @JsonSerialize(using = DateSerializers.LocalDateTimeSerializer.class)
   private LocalDateTime filterDateFrom;
 
   @JsonProperty("FilterDateTo")
-  @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-  @JsonSerialize(using = LocalDateTimeSerializer.class)
+  @JsonDeserialize(using = DateDeserializers.LocalDateTimeDeserializer.class)
+  @JsonSerialize(using = DateSerializers.LocalDateTimeSerializer.class)
   private LocalDateTime filterDateTo;
 
   @JsonProperty("FilterFillingApplicationEndDateFrom")
-  @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-  @JsonSerialize(using = LocalDateTimeSerializer.class)
+  @JsonDeserialize(using = DateDeserializers.LocalDateTimeDeserializer.class)
+  @JsonSerialize(using = DateSerializers.LocalDateTimeSerializer.class)
   private LocalDateTime filterFillingApplicationEndDateFrom;
 
   @JsonProperty("FilterFillingApplicationEndDateTo")
-  @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-  @JsonSerialize(using = LocalDateTimeSerializer.class)
+  @JsonDeserialize(using = DateDeserializers.LocalDateTimeDeserializer.class)
+  @JsonSerialize(using = DateSerializers.LocalDateTimeSerializer.class)
   private LocalDateTime filterFillingApplicationEndDateTo;
 
   @JsonProperty("FilterPriceMin")
@@ -84,4 +85,7 @@ public class TradeFilter {
 
   @JsonProperty("UsedClassificatorType")
   private Integer usedClassificatorType;
+
+  @JsonProperty("SourcePlatform")
+  private SourcePlatformType sourcePlatform;
 }

@@ -53,6 +53,9 @@ public class LoginController extends AbstractUIController {
   @Autowired
   private UIDispatcher uiDispatcher;
 
+  @Autowired
+  private LoginTask loginTask;
+
   @Override
   public void bootstrap() {
     List<User> users = userService.findAll();
@@ -93,7 +96,7 @@ public class LoginController extends AbstractUIController {
           }
         }
       }
-      LoginTask loginTask = new LoginTask(certInfo);
+      loginTask.setCertInfo(certInfo);
       loginTask.setOnFailed(event -> {
         releaseUI();
         UIController.showErrorMessage(loginTask.getException().getMessage());
@@ -103,9 +106,7 @@ public class LoginController extends AbstractUIController {
         uiDispatcher.showMainUI();
       });
       lockUI();
-      Thread loginThread = new Thread(loginTask);
-      applicationContext.getAutowireCapableBeanFactory().autowireBean(loginTask);
-      loginThread.start();
+      loginTask.start();
     } catch (Exception ex) {
       log.error("", ex);
       UIController.showErrorMessage(ex.getMessage());

@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import ru.monsterdev.mosregtrader.domain.ProposalProduct;
-import ru.monsterdev.mosregtrader.domain.TradeProduct;
 import ru.monsterdev.mosregtrader.model.SupplierProposal;
 import ru.monsterdev.mosregtrader.model.dto.ProductDto;
 import ru.monsterdev.mosregtrader.model.dto.ProposalEditPriceDto;
@@ -118,11 +116,11 @@ public class StringUtil {
     return matcher.find() ? matcher.group(1) : null;
   }
 
-  public static Set<TradeProduct> parseTradeForProducts(String content) {
+  public static Set<ProductDto> parseTradeForProducts(String content) {
     String productRegExp = "product\\.init\\((('([^']*)'[,\\s]*)+)\\);";
     Pattern pattern = Pattern.compile(productRegExp, Pattern.CASE_INSENSITIVE);
     Matcher matcher = pattern.matcher(content);
-    Set<TradeProduct> products = new HashSet<>();
+    Set<ProductDto> products = new HashSet<>();
     while (matcher.find()) {
       String argRegExp = "'([^']*)'(,\\s*)?";
       Pattern argPattern = Pattern.compile(argRegExp, Pattern.CASE_INSENSITIVE);
@@ -132,7 +130,7 @@ public class StringUtil {
       while (argMatcher.find()) {
         productInitParams.add(argMatcher.group(1));
       }
-      TradeProduct productInfo = new TradeProduct();
+      ProductDto productInfo = new ProductDto();
       productInfo.setId(Long.parseLong(productInitParams.get(10)));
       productInfo.setOkeiCode(productInitParams.get(0));
       productInfo.setOkeiDescription(productInitParams.get(1));
@@ -149,8 +147,8 @@ public class StringUtil {
     return products;
   }
 
-  public static Set<ProposalProduct> parseProposalForProducts(String content) {
-    Set<ProposalProduct> proposalProducts = new HashSet<>();
+  public static Set<ProductDto> parseProposalForProducts(String content) {
+    Set<ProductDto> proposalProducts = new HashSet<>();
     String productsInfoRegExp = "ko\\.mapping\\.fromJSON\\('(.+?)', mapping, vmApplication\\)";
     Pattern pattern = Pattern
         .compile(productsInfoRegExp, Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.MULTILINE);
@@ -166,7 +164,7 @@ public class StringUtil {
       ObjectMapper mapper = new ObjectMapper();
       ProposalEditPriceDto dto = mapper.readValue(productsInfo, ProposalEditPriceDto.class);
       for (ProductDto product : dto.getProducts()) {
-        ProposalProduct proposalProduct = new ProposalProduct();
+        ProductDto proposalProduct = new ProductDto();
         proposalProduct.setId(product.getId());
         proposalProduct.setExternalId(product.getExternalId());
         proposalProduct.setName(product.getName());

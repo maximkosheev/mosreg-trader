@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import javafx.concurrent.Task;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import ru.monsterdev.mosregtrader.exceptions.MosregTraderException;
 import ru.monsterdev.mosregtrader.http.Session;
 import ru.monsterdev.mosregtrader.http.TraderResponse;
@@ -21,7 +22,8 @@ import ru.monsterdev.mosregtrader.services.HttpService;
 import ru.monsterdev.mosregtrader.utils.StringUtil;
 
 @Slf4j
-public class LoginTask extends Task<Boolean> {
+@Component
+public class LoginTask extends Task<Boolean> implements TraderTask {
 
   private static final String LOGIN_ERROR_1 = "Ошибка при запросе страницы входа";
   private static final String LOGIN_ERROR_2 = "Ошибка авторизации";
@@ -36,7 +38,7 @@ public class LoginTask extends Task<Boolean> {
   @Autowired
   private CryptoService cryptoService;
 
-  public LoginTask(CertificateInfo certInfo) {
+  public void setCertInfo(CertificateInfo certInfo) {
     this.certInfo = certInfo;
   }
 
@@ -77,5 +79,11 @@ public class LoginTask extends Task<Boolean> {
       log.error("", ex);
       throw ex;
     }
+  }
+
+  @Override
+  public void start() {
+    Thread thread = new Thread(this);
+    thread.start();
   }
 }

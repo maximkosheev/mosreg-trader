@@ -35,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import ru.monsterdev.mosregtrader.domain.FilterOption;
 import ru.monsterdev.mosregtrader.enums.FilterType;
+import ru.monsterdev.mosregtrader.enums.SourcePlatformType;
 import ru.monsterdev.mosregtrader.model.StatusFilterOption;
 import ru.monsterdev.mosregtrader.model.dto.TradeFilter;
 import ru.monsterdev.mosregtrader.model.dto.TradeInfoDto;
@@ -97,7 +98,7 @@ public class TradeFilterController extends AbstractUIController {
   private DictionaryService dictionaryService;
 
   @Autowired
-  private ApplicationContext applicationContext;
+  private ApplicationContext context;
 
   private DateTimeFormatter onlyDate = DateTimeFormatter.ofPattern("dd.MM.yyyy");
   private DateTimeFormatter withTime = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
@@ -234,16 +235,17 @@ public class TradeFilterController extends AbstractUIController {
       filter.setTradeState(cmbStatus.getValue().getCode());
     }
     filter.setUsedClassificatorType(10);
+    filter.setSourcePlatform(SourcePlatformType.EASUZ);
 
-    GetFilteredTradesTask filteringTask = new GetFilteredTradesTask(filter);
-    filteringTask.setOnFailed(event1 -> {
-      log.error("", filteringTask.getException());
+    GetFilteredTradesTask filterTradesTask = context.getBean(GetFilteredTradesTask.class, filter);
+    filterTradesTask.setOnFailed(event1 -> {
+      log.error("", filterTradesTask.getException());
       releaseUI();
-      UIController.showErrorMessage(filteringTask.getException().getMessage());
+      UIController.showErrorMessage(filterTradesTask.getException().getMessage());
     });
-    filteringTask.setOnSucceeded(event1 -> {
+    filterTradesTask.setOnSucceeded(event1 -> {
       releaseUI();
-      TradesInfoDto tradesInfoList = filteringTask.getValue();
+      TradesInfoDto tradesInfoList = filterTradesTask.getValue();
       ObservableList<TradeViewItem> items = FXCollections.observableArrayList();
       for (TradeInfoDto tradeInfo : tradesInfoList.getTrades()) {
         items.add(new TradeViewItem(tradeInfo));
@@ -262,9 +264,7 @@ public class TradeFilterController extends AbstractUIController {
     });
     lblTradesCount.setText(PENDING_MSG);
     lockUI();
-    Thread loginThread = new Thread(filteringTask);
-    applicationContext.getAutowireCapableBeanFactory().autowireBean(filteringTask);
-    loginThread.start();
+    filterTradesTask.start();
   }
 
   private void clearFilter(boolean onlyFields) {

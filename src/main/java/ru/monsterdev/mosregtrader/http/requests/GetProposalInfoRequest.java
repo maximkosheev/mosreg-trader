@@ -6,6 +6,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.protocol.HTTP;
+import ru.monsterdev.mosregtrader.http.Session;
 import ru.monsterdev.mosregtrader.http.TraderRequest;
 import ru.monsterdev.mosregtrader.model.dto.ProposalFilter;
 
@@ -31,6 +32,7 @@ public class GetProposalInfoRequest extends TraderRequest {
       request.setHeader("Origin", "https://market.mosreg.ru");
       request.setHeader("Referer", "https://market.mosreg.ru/");
       request.setHeader("XXX-TenantId-Header", "2");
+      request.setHeader("Authorization", Session.getInstance().getProperty("authCode"));
       StringEntity se = new StringEntity(body, ContentType.APPLICATION_JSON);
       request.setEntity(se);
     } catch (Exception ex) {

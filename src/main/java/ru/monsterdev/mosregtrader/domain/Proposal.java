@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import lombok.Data;
 import ru.monsterdev.mosregtrader.enums.ProposalStatus;
+import ru.monsterdev.mosregtrader.model.dto.ProductDto;
 
 /**
  * Proposal class
@@ -24,5 +25,5 @@ public class Proposal {
   /**
    * Торговые позиции по данному предложению
    */
-  private Set<ProposalProduct> products = new HashSet<>();
+  private Set<ProductDto> products = new HashSet<>();
 }

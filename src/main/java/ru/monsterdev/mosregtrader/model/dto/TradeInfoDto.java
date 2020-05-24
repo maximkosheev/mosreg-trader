@@ -9,8 +9,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Date;
 import lombok.Data;
-import ru.monsterdev.mosregtrader.utils.converters.LocalDateTimeDeserializer;
-import ru.monsterdev.mosregtrader.utils.converters.LocalDateTimeSerializer;
+import ru.monsterdev.mosregtrader.utils.converters.DateDeserializers;
+import ru.monsterdev.mosregtrader.utils.converters.DateSerializers;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -32,12 +32,12 @@ public class TradeInfoDto {
   @JsonProperty("IsInitialPriceDefined")
   private Boolean isInitialPriceDefined;
   @JsonProperty("FillingApplicationEndDate")
-  @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-  @JsonSerialize(using = LocalDateTimeSerializer.class)
+  @JsonDeserialize(using = DateDeserializers.LocalDateTimeDeserializer.class)
+  @JsonSerialize(using = DateSerializers.LocalDateTimeSerializer.class)
   private LocalDateTime fillingApplicationEndDate;
   @JsonProperty("PublicationDate")
-  @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-  @JsonSerialize(using = LocalDateTimeSerializer.class)
+  @JsonDeserialize(using = DateDeserializers.LocalDateTimeDeserializer.class)
+  @JsonSerialize(using = DateSerializers.LocalDateTimeSerializer.class)
   private LocalDateTime publicationDate;
   @JsonProperty("ApplicationsCount")
   private Integer applicationsCount;

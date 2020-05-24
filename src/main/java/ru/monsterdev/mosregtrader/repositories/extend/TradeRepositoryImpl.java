@@ -35,7 +35,11 @@ public class TradeRepositoryImpl extends Observable implements TradeRepository {
   }
 
   @Override
-  public List<Trade> fetchAll(User user) {
-    return tradeRepositoryBase.findAllByUser(user);
+  public List<Trade> findAll(User user) {
+    // загружаем данные из базы только при первом запросе
+    if (trades.isEmpty()) {
+      trades.addAll(tradeRepositoryBase.findAllByUser(user));
+    }
+    return trades;
   }
 }

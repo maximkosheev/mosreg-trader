@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -16,6 +15,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import lombok.Data;
 import ru.monsterdev.mosregtrader.enums.TradeStatus;
+import ru.monsterdev.mosregtrader.model.dto.ProductDto;
 
 /**
  * Класс описывающий сущность "Закупка", хрянящаяся в БД
@@ -78,7 +78,7 @@ public class Trade {
    * Этот атрибут задается при добавлении закупки в базу, и затем, когда придет время подавать предложение по этой
    * закупке это будет начальной ценой предложения.
    */
-  @Transient
+  @Column(name = "start_price")
   private BigDecimal startPrice;
 
   /**
@@ -119,7 +119,7 @@ public class Trade {
    * Список товаров/позиций по данной закупке
    */
   @Transient
-  private Set<TradeProduct> tradeProducts = new HashSet<>();
+  private Set<ProductDto> products = new HashSet<>();
 
   @ManyToOne
   @JoinColumn(name = "user_id")

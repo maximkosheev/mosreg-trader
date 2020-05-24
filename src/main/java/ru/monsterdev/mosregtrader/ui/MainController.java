@@ -10,9 +10,6 @@ import java.util.Objects;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import javafx.animation.Animation;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.beans.value.ChangeListener;
 import javafx.concurrent.Worker;
 import javafx.fxml.FXML;
@@ -28,10 +25,10 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
-import javafx.util.Duration;
 import lombok.extern.slf4j.Slf4j;
 import netscape.javascript.JSObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.StringUtils;
 import ru.monsterdev.mosregtrader.domain.FilterOption;
 import ru.monsterdev.mosregtrader.domain.Trade;
@@ -41,10 +38,10 @@ import ru.monsterdev.mosregtrader.exceptions.MosregTraderException;
 import ru.monsterdev.mosregtrader.model.ProposalData;
 import ru.monsterdev.mosregtrader.model.StatusFilterOption;
 import ru.monsterdev.mosregtrader.model.dto.TradeInfoDto;
-import ru.monsterdev.mosregtrader.repositories.TradeRepository;
 import ru.monsterdev.mosregtrader.services.DictionaryService;
 import ru.monsterdev.mosregtrader.services.TradeService;
-import ru.monsterdev.mosregtrader.services.UserService;
+import ru.monsterdev.mosregtrader.tasks.FetchTradesInfoTask;
+import ru.monsterdev.mosregtrader.tasks.SubmitProposalTask;
 import ru.monsterdev.mosregtrader.ui.control.WaitIndicator;
 
 @Slf4j
@@ -87,34 +84,44 @@ public class MainController extends AbstractUIController implements Observer {
   @FXML
   private Label lblStatusText;
   private WaitIndicator waitIndicator;
-
-  @Autowired
-  private UserService userService;
+  private WebEngine webEngine;
+  private ChangeListener<Number> currentPageChangeListener;
   @Autowired
   private DictionaryService dictionaryService;
   @Autowired
   private UIDispatcher uiDispatcher;
-
-  private WebEngine webEngine;
-
-  private ChangeListener<Number> currentPageChangeListener;
-
   private Map<String, Object> filterOptions = new Hashtable<>();
-
   @Autowired
   private TradeService tradeService;
-
   @Autowired
-  private TradeRepository tradeRepository;
-
-  @Override
-  public void initialize() {
-    tradeRepository.addObserver(this);
-  }
+  private FetchTradesInfoTask fetchTradesInfoTask;
+  @Autowired
+  private ThreadPoolTaskScheduler threadPoolTaskScheduler;
+  @Autowired
+  private SubmitProposalTask submitProposalTask;
 
   @Override
   public void bootstrap() {
-    //TODO: привязать поле lblStatusText к работе потоков
+    fetchTradesInfoTask.setOnFailed(event -> {
+      releaseUI();
+      UIController.showErrorMessage(fetchTradesInfoTask.getException().getMessage());
+    });
+    fetchTradesInfoTask.setOnSucceeded(event -> {
+      releaseUI();
+      refreshProposals(fetchTradesInfoTask.getValue(), filterOptions);
+      threadPoolTaskScheduler.scheduleWithFixedDelay(submitProposalTask, 60 * 1000);
+    });
+
+    webEngine = mainView.getEngine();
+    webEngine.getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
+      if (newValue == Worker.State.SUCCEEDED) {
+        lblStatusText.setText(PENDING_MSG);
+        fetchTradesInfoTask.start();
+      }
+    });
+    JSObject window = (JSObject) webEngine.executeScript("window");
+    window.setMember("app", this);
+
     lblStatusText.setText(IDLE_MSG);
     cmbFilters.setOnAction(value -> {
       FilterOption filter = cmbFilters.getValue();
@@ -134,30 +141,16 @@ public class MainController extends AbstractUIController implements Observer {
     );
     cmbStatus.getSelectionModel().select(0);
 
-
-    webEngine = mainView.getEngine();
-    webEngine.getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
-      if (newValue == Worker.State.SUCCEEDED) {
-        refreshProposals(filterOptions);
-      }
-    });
-    JSObject window = (JSObject) webEngine.executeScript("window");
-    window.setMember("app", this);
-
-
     cmbItemsPerPage.getItems().addAll(5, 10, 20, 50, 100);
     cmbItemsPerPage.setValue(10);
     cmbItemsPerPage.setOnAction(event -> doApplyFilter());
 
-    webEngine.load(getClass().getResource("/net/monsterdev/automosreg/ui/mainView.html").toExternalForm());
+    webEngine.load(getClass().getResource("/ru/monsterdev/mosregtrader/ui/mainView.html").toExternalForm());
 
     waitIndicator = new WaitIndicator();
 
     currentPageChangeListener = (observable, oldValue, newValue) -> doApplyFilter();
     pages.currentPageIndexProperty().addListener(currentPageChangeListener);
-
-    //timeline.setCycleCount(Animation.INDEFINITE);
-    //timeline.play();
   }
 
   private void prepareFilterOptions() {
@@ -189,11 +182,12 @@ public class MainController extends AbstractUIController implements Observer {
   /**
    * Выполняет поиск предложений в БД, удовлетворяющих параметрам фильтра и отображает их на экране
    */
-  private void refreshProposals(Map<String, Object> filterOptions) {
+  private void refreshProposals(List<Trade> trades, Map<String, Object> filterOptions) {
     lockUI();
     int countPerPage = cmbItemsPerPage.getValue();
     int startIndex = pages.getCurrentPageIndex() * countPerPage;
     try {
+      lblTradesCount.setText(String.valueOf(trades.size()));
       /*
       List<Trade> trades = tradesRepository.findAll(userService.getCurrentUser().getId(), filterOptions);
       List<TradeProposalItem> items = trades.stream()

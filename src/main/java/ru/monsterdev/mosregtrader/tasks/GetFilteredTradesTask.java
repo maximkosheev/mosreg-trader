@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.concurrent.Task;
 import org.apache.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import ru.monsterdev.mosregtrader.exceptions.MosregTraderException;
 import ru.monsterdev.mosregtrader.http.TraderResponse;
 import ru.monsterdev.mosregtrader.http.requests.GetTradeListRequest;
@@ -16,7 +18,9 @@ import ru.monsterdev.mosregtrader.services.HttpService;
  *
  * @author madmax
  */
-public class GetFilteredTradesTask extends Task<TradesInfoDto> {
+@Component
+@Scope("prototype")
+public class GetFilteredTradesTask extends Task<TradesInfoDto> implements TraderTask {
 
   private static final String GET_FILTERED_TRADES_1 = "Ошибка при получении списка закупок";
 
@@ -24,6 +28,10 @@ public class GetFilteredTradesTask extends Task<TradesInfoDto> {
   private HttpService httpService;
 
   private TradeFilter filter;
+
+  public GetFilteredTradesTask() {
+    filter = new TradeFilter();
+  }
 
   public GetFilteredTradesTask(TradeFilter filter) {
     this.filter = filter;
@@ -37,5 +45,11 @@ public class GetFilteredTradesTask extends Task<TradesInfoDto> {
       throw new MosregTraderException(GET_FILTERED_TRADES_1);
     }
     return mapper.readValue(response.getEntity(), TradesInfoDto.class);
+  }
+
+  @Override
+  public void start() {
+    Thread thread = new Thread(this);
+    thread.start();
   }
 }

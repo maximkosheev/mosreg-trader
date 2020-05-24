@@ -10,6 +10,7 @@ create table trades (
   trade_id bigint not null,
   activate_time bigint not null,
   min_val decimal(11,2) not null,
+  start_price decimal(11,2) not null,
   user_id bigint
 );
 

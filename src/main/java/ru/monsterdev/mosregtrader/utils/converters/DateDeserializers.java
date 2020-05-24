@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class DateDeserializers {
@@ -43,8 +45,8 @@ public class DateDeserializers {
      * эти форматы - оказалось проблемой. Вот поэтому нужно это обрезания, которое осталяет только ту часть строки,
      * которая описана маской (да, я не предусматривал всякие извращенский маски, типа как в PHP)
      */
-    protected String prepareString(String value) {
-      return (value != null && value.length() >= pattern.length()) ? value.substring(0, pattern.length()) : value;
+    protected String prepareString(String value, String mask) {
+      return (value != null && value.length() >= mask.length()) ? value.substring(0, mask.length()) : value;
     }
 
     @Override
@@ -90,7 +92,7 @@ public class DateDeserializers {
     public LocalDate deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
       String value = p.getText();
       try {
-        return value != null ? LocalDate.parse(prepareString(value)) : null;
+        return value != null ? LocalDate.parse(prepareString(value, pattern)) : null;
       } catch (Exception ex) {
         throw new JsonParseException(p, value, ex);
       }
@@ -124,9 +126,10 @@ public class DateDeserializers {
 
     @Override
     public LocalDateTime deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-      String value = p.getText();
+      String value = prepareString(p.getText(), "yyyy-MM-ddThh:mm:ss");
       try {
-        return value != null ? LocalDateTime.parse(prepareString(value)) : null;
+        return value != null ? ZonedDateTime.of(LocalDateTime.parse(value), ZoneId.of("UTC"))
+            .withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime() : null;
       } catch (Exception ex) {
         throw new JsonParseException(p, value, ex);
       }
