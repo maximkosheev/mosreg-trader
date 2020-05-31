@@ -97,12 +97,13 @@ public class LoginController extends AbstractUIController {
         }
       }
       loginTask.setCertInfo(certInfo);
+      loginTask.setUser(user);
       loginTask.setOnFailed(event -> {
         releaseUI();
         UIController.showErrorMessage(loginTask.getException().getMessage());
       });
       loginTask.setOnSucceeded(event -> {
-        userService.setCurrentUser(user);
+        releaseUI();
         uiDispatcher.showMainUI();
       });
       lockUI();

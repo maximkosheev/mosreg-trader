@@ -36,8 +36,8 @@ import org.springframework.context.ApplicationContext;
 import ru.monsterdev.mosregtrader.domain.FilterOption;
 import ru.monsterdev.mosregtrader.enums.FilterType;
 import ru.monsterdev.mosregtrader.enums.SourcePlatformType;
-import ru.monsterdev.mosregtrader.model.StatusFilterOption;
-import ru.monsterdev.mosregtrader.model.dto.TradeFilter;
+import ru.monsterdev.mosregtrader.enums.TradeStatus;
+import ru.monsterdev.mosregtrader.model.dto.TradeFilterDto;
 import ru.monsterdev.mosregtrader.model.dto.TradeInfoDto;
 import ru.monsterdev.mosregtrader.model.dto.TradesInfoDto;
 import ru.monsterdev.mosregtrader.services.DictionaryService;
@@ -83,7 +83,7 @@ public class TradeFilterController extends AbstractUIController {
   @FXML
   private TextField edtKOZ;
   @FXML
-  private ComboBox<StatusFilterOption> cmbStatus;
+  private ComboBox<TradeStatus> cmbStatus;
   @FXML
   private ComboBox<FilterOption> cmbFilters;
   @FXML
@@ -120,15 +120,7 @@ public class TradeFilterController extends AbstractUIController {
       }
     });
     cmbFilters.getItems().addAll(dictionaryService.findAllFilters(FilterType.PROPOSAL));
-    cmbStatus.getItems().addAll(
-        new StatusFilterOption(0, "Все"),
-        new StatusFilterOption(15, "Прием предложений"),
-        new StatusFilterOption(20, "Согласование"),
-        new StatusFilterOption(40, "Заключение договора"),
-        new StatusFilterOption(50, "Договор заключен"),
-        new StatusFilterOption(25, "Нет предложений"),
-        new StatusFilterOption(30, "Отменена")
-    );
+    cmbStatus.getItems().addAll(TradeStatus.allFromMosreg());
     cmbStatus.getSelectionModel().select(0);
     cmbItemsPerPage.getItems().addAll(5, 10, 20, 50, 100);
     cmbItemsPerPage.setValue(100);
@@ -199,7 +191,7 @@ public class TradeFilterController extends AbstractUIController {
   }
 
   private void doFilter(int page) {
-    TradeFilter filter = new TradeFilter();
+    TradeFilterDto filter = new TradeFilterDto();
 
     String classificatorCodes = edtKOZ.getText();
     if (!StringUtils.isEmpty(classificatorCodes)) {
@@ -303,7 +295,7 @@ public class TradeFilterController extends AbstractUIController {
     edtSummMax.setText(fields.getOrDefault("SummMax", ""));
     edtKOZ.setText(fields.getOrDefault("KOZ", ""));
     cmbStatus.getSelectionModel().select(0);
-    for (StatusFilterOption status : cmbStatus.getItems()) {
+    for (TradeStatus status : cmbStatus.getItems()) {
       if (status.getCode() == Integer.parseInt(fields.getOrDefault("Status", "0"))) {
         cmbStatus.setValue(status);
       }

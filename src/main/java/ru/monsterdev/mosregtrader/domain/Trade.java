@@ -15,6 +15,8 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import lombok.Data;
 import ru.monsterdev.mosregtrader.enums.TradeStatus;
+import ru.monsterdev.mosregtrader.model.StatusFilterOption;
+import ru.monsterdev.mosregtrader.model.TradeFilter;
 import ru.monsterdev.mosregtrader.model.dto.ProductDto;
 
 /**
@@ -125,6 +127,31 @@ public class Trade {
   @JoinColumn(name = "user_id")
   private User user;
 
+  @Column(name = "is_archived")
+  private Boolean isArchived = false;
+
   @Transient
   private Boolean updated = false;
+
+  /**
+   * Возвращает признак завершения торгов по закупке
+   * @return true, если торги завершены, false в противном случае
+   */
+  public boolean isFinished() {
+    return getStatus() == TradeStatus.CANCELED
+        || getStatus() == TradeStatus.CONTRACTED
+        || LocalDateTime.now().isAfter(getEndDT());
+  }
+
+  public TradeStatus getFilterStatus() {
+    if (isArchived) {
+      return TradeStatus.ARCHIVED;
+    } else if (isFinished()) {
+      return TradeStatus.CLOSED;
+    } else if (proposal == null) {
+      return TradeStatus.NO_PROPOSAL;
+    } else {
+      return TradeStatus.ACTIVE;
+    }
+  }
 }

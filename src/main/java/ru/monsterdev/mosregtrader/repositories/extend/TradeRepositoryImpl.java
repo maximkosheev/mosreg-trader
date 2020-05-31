@@ -1,8 +1,7 @@
 package ru.monsterdev.mosregtrader.repositories.extend;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Observable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -13,9 +12,10 @@ import ru.monsterdev.mosregtrader.repositories.TradeRepositoryBase;
 
 @Slf4j
 @Component
-public class TradeRepositoryImpl extends Observable implements TradeRepository {
+public class TradeRepositoryImpl implements TradeRepository {
 
-  private List<Trade> trades = new ArrayList<>();
+  private CopyOnWriteArrayList<Trade> trades = new CopyOnWriteArrayList<>();
+  //private List<Trade> trades = new ArrayList<>();
 
   @Autowired
   private TradeRepositoryBase tradeRepositoryBase;
@@ -26,7 +26,6 @@ public class TradeRepositoryImpl extends Observable implements TradeRepository {
       trade.setUser(user);
       Trade dbTrade = tradeRepositoryBase.save(trade);
       trades.add(dbTrade);
-      notifyObservers(dbTrade);
       return dbTrade;
     } catch (Exception ex) {
       log.error("", ex);

@@ -14,7 +14,7 @@ import ru.monsterdev.mosregtrader.utils.converters.DateSerializers;
 
 @Data
 @JsonInclude(Include.NON_EMPTY)
-public class TradeFilter {
+public class TradeFilterDto {
   @JsonProperty("ClassificatorCodes")
   private List<String> classificatorCodes;
 

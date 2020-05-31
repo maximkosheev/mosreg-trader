@@ -11,6 +11,7 @@ create table trades (
   activate_time bigint not null,
   min_val decimal(11,2) not null,
   start_price decimal(11,2) not null,
+  is_archived boolean null default false,
   user_id bigint
 );
 

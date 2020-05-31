@@ -1,11 +1,10 @@
 package ru.monsterdev.mosregtrader.repositories;
 
 import java.util.List;
-import ru.monsterdev.mosregtrader.core.IObservable;
 import ru.monsterdev.mosregtrader.domain.Trade;
 import ru.monsterdev.mosregtrader.domain.User;
 
-public interface TradeRepository extends IObservable {
+public interface TradeRepository {
 
   /**
    * Возвращает список всех закупок пользователя user

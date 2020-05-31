@@ -1,15 +1,16 @@
 package ru.monsterdev.mosregtrader.ui;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javafx.beans.value.ChangeListener;
 import javafx.concurrent.Worker;
 import javafx.fxml.FXML;
@@ -28,6 +29,7 @@ import javafx.scene.web.WebView;
 import lombok.extern.slf4j.Slf4j;
 import netscape.javascript.JSObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.StringUtils;
 import ru.monsterdev.mosregtrader.domain.FilterOption;
@@ -36,20 +38,23 @@ import ru.monsterdev.mosregtrader.enums.FilterType;
 import ru.monsterdev.mosregtrader.enums.TradeStatus;
 import ru.monsterdev.mosregtrader.exceptions.MosregTraderException;
 import ru.monsterdev.mosregtrader.model.ProposalData;
-import ru.monsterdev.mosregtrader.model.StatusFilterOption;
+import ru.monsterdev.mosregtrader.model.TradeFilter;
 import ru.monsterdev.mosregtrader.model.dto.TradeInfoDto;
 import ru.monsterdev.mosregtrader.services.DictionaryService;
 import ru.monsterdev.mosregtrader.services.TradeService;
-import ru.monsterdev.mosregtrader.tasks.FetchTradesInfoTask;
-import ru.monsterdev.mosregtrader.tasks.SubmitProposalTask;
+import ru.monsterdev.mosregtrader.services.scheduled.SubmitProposalService;
+import ru.monsterdev.mosregtrader.services.scheduled.UpdateTradesInfoService;
+import ru.monsterdev.mosregtrader.tasks.UpdateTradesInfoTask;
 import ru.monsterdev.mosregtrader.ui.control.WaitIndicator;
+import ru.monsterdev.mosregtrader.ui.model.ProposalViewItem;
 
 @Slf4j
-public class MainController extends AbstractUIController implements Observer {
+public class MainController extends AbstractUIController {
 
   private static final String ERROR_COMMON_LOG_MSG = "Failed to complete operation due error %s : %s";
   private static final String PENDING_MSG = "Ожидайте, идет обновление...";
   private static final String IDLE_MSG = "Простой";
+  private static final String ERROR_MSG = "Ошибка!";
 
   private static final Integer UPDATE_MAIN_VIEW_TICK = 60 * 1000;
 
@@ -68,7 +73,7 @@ public class MainController extends AbstractUIController implements Observer {
   @FXML
   private TextField edtTradeName;
   @FXML
-  private ComboBox<StatusFilterOption> cmbStatus;
+  private ComboBox<TradeStatus> cmbStatus;
   @FXML
   private DatePicker dateFinishFrom;
   @FXML
@@ -87,37 +92,27 @@ public class MainController extends AbstractUIController implements Observer {
   private WebEngine webEngine;
   private ChangeListener<Number> currentPageChangeListener;
   @Autowired
+  private ApplicationContext applicationContext;
+  @Autowired
   private DictionaryService dictionaryService;
   @Autowired
   private UIDispatcher uiDispatcher;
-  private Map<String, Object> filterOptions = new Hashtable<>();
+  private TradeFilter filterOptions = new TradeFilter();
   @Autowired
   private TradeService tradeService;
   @Autowired
-  private FetchTradesInfoTask fetchTradesInfoTask;
-  @Autowired
   private ThreadPoolTaskScheduler threadPoolTaskScheduler;
   @Autowired
-  private SubmitProposalTask submitProposalTask;
+  private SubmitProposalService submitProposalService;
+  @Autowired
+  private UpdateTradesInfoService updateTradesInfoService;
 
   @Override
   public void bootstrap() {
-    fetchTradesInfoTask.setOnFailed(event -> {
-      releaseUI();
-      UIController.showErrorMessage(fetchTradesInfoTask.getException().getMessage());
-    });
-    fetchTradesInfoTask.setOnSucceeded(event -> {
-      releaseUI();
-      refreshProposals(fetchTradesInfoTask.getValue(), filterOptions);
-      threadPoolTaskScheduler.scheduleWithFixedDelay(submitProposalTask, 60 * 1000);
-    });
 
     webEngine = mainView.getEngine();
     webEngine.getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
-      if (newValue == Worker.State.SUCCEEDED) {
-        lblStatusText.setText(PENDING_MSG);
-        fetchTradesInfoTask.start();
-      }
+      if (newValue == Worker.State.SUCCEEDED) { showTrades(); }
     });
     JSObject window = (JSObject) webEngine.executeScript("window");
     window.setMember("app", this);
@@ -132,87 +127,96 @@ public class MainController extends AbstractUIController implements Observer {
     });
     cmbFilters.getItems().addAll(dictionaryService.findAllFilters(FilterType.PROPOSAL));
 
-    cmbStatus.getItems().addAll(
-        new StatusFilterOption(StatusFilterOption.ALL, "Все"),
-        new StatusFilterOption(StatusFilterOption.OPENED, "Открытые закупки"),
-        new StatusFilterOption(StatusFilterOption.CLOSED, "Закрытые закупки"),
-        new StatusFilterOption(StatusFilterOption.ACTIVE, "Активные"),
-        new StatusFilterOption(StatusFilterOption.ARCHIVED, "Архивные")
-    );
+    cmbStatus.getItems().addAll(TradeStatus.allFromLocal());
     cmbStatus.getSelectionModel().select(0);
 
     cmbItemsPerPage.getItems().addAll(5, 10, 20, 50, 100);
     cmbItemsPerPage.setValue(10);
     cmbItemsPerPage.setOnAction(event -> doApplyFilter());
 
-    webEngine.load(getClass().getResource("/ru/monsterdev/mosregtrader/ui/mainView.html").toExternalForm());
-
     waitIndicator = new WaitIndicator();
 
     currentPageChangeListener = (observable, oldValue, newValue) -> doApplyFilter();
     pages.currentPageIndexProperty().addListener(currentPageChangeListener);
+
+    webEngine.load(getClass().getResource("/ru/monsterdev/mosregtrader/ui/mainView.html").toExternalForm());
+
+    threadPoolTaskScheduler.scheduleWithFixedDelay(submitProposalService, 60 * 1000);
+    threadPoolTaskScheduler.scheduleWithFixedDelay(updateTradesInfoService, Date.from(LocalDateTime.now().plusMinutes(60)
+        .atZone(ZoneId.systemDefault()).toInstant()), 60 * 60 * 1000);
   }
 
   private void prepareFilterOptions() {
     filterOptions.clear();
 
     if (!StringUtils.isEmpty(edtTradeNum.getText())) {
-      filterOptions.put("TradeNum", Long.parseLong(edtTradeNum.getText()));
+      filterOptions.setTradeNum(Long.parseLong(edtTradeNum.getText()));
     }
     if (!StringUtils.isEmpty(edtTradeName.getText())) {
-      filterOptions.put("TradeName", edtTradeName.getText());
+      filterOptions.setTradeName(edtTradeName.getText());
     }
     if (dateBeginFrom.getValue() != null) {
-      filterOptions.put("BeginFrom", dateBeginFrom.getValue());
+      filterOptions.setBeginFrom(dateBeginFrom.getValue());
     }
     if (dateBeginTo.getValue() != null) {
-      filterOptions.put("BeginTo", dateBeginTo.getValue());
+      filterOptions.setBeginTo(dateBeginTo.getValue());
     }
     if (dateFinishFrom.getValue() != null) {
-      filterOptions.put("FinishFrom", dateFinishFrom.getValue());
+      filterOptions.setFinishFrom(dateFinishFrom.getValue());
     }
     if (dateFinishTo.getValue() != null) {
-      filterOptions.put("FinishTo", dateFinishTo.getValue());
+      filterOptions.setFinishTo(dateFinishTo.getValue());
     }
     if (cmbStatus.getValue() != null) {
-      filterOptions.put("Status", cmbStatus.getValue());
+      filterOptions.setStatus(cmbStatus.getValue());
     }
   }
 
-  /**
-   * Выполняет поиск предложений в БД, удовлетворяющих параметрам фильтра и отображает их на экране
-   */
-  private void refreshProposals(List<Trade> trades, Map<String, Object> filterOptions) {
-    lockUI();
-    int countPerPage = cmbItemsPerPage.getValue();
-    int startIndex = pages.getCurrentPageIndex() * countPerPage;
+  private void printProposals(List<Trade> trades) {
+    List<ProposalViewItem> items = trades.stream().map(ProposalViewItem::new).collect(Collectors.toList());
+
+    JSObject mainView = (JSObject) webEngine.executeScript("mainView");
+    mainView.call("clearProposals");
+    mainView.call("showProposals", items);
+  }
+
+  private void showTrades() {
     try {
-      lblTradesCount.setText(String.valueOf(trades.size()));
-      /*
-      List<Trade> trades = tradesRepository.findAll(userService.getCurrentUser().getId(), filterOptions);
-      List<TradeProposalItem> items = trades.stream()
-          .skip(startIndex)
-          .limit(startIndex + countPerPage)
-          .map(TradeProposalItem::new)
+      int countPerPage = cmbItemsPerPage.getValue();
+      int startIndex = pages.getCurrentPageIndex() * countPerPage;
+      // выборка закупок в соответствии с фильтром и текущей страницей
+      List<Trade> filteredTrades = tradeService
+          .findAll(filterOptions)
+          .stream()
+          .skip(startIndex).limit(startIndex + countPerPage)
           .collect(Collectors.toList());
-          */
-      //JSObject mainView = (JSObject) webEngine.executeScript("mainView");
-      //mainView.call("clearProposals");
-      //mainView.call("showProposals", items);
-      //pages.setPageCount(Math.floorDiv(trades.size(), countPerPage) + 1);
-      //lblTradesCount.setText(String.valueOf(trades.size()));
-    } catch (Throwable t) {
-      t.printStackTrace();
+
+      UpdateTradesInfoTask updateTradesInfoTask = applicationContext.getBean(UpdateTradesInfoTask.class, tradeService,
+          filteredTrades);
+
+      updateTradesInfoTask.setOnFailed(event -> {
+        releaseUI();
+        lblStatusText.setText(ERROR_MSG);
+        UIController.showErrorMessage(updateTradesInfoTask.getException().getMessage());
+      });
+
+      updateTradesInfoTask.setOnSucceeded(event -> {
+        releaseUI();
+        printProposals(updateTradesInfoTask.getValue());
+        lblStatusText.setText(IDLE_MSG);
+        pages.setPageCount(Math.floorDiv(filteredTrades.size(), countPerPage) + 1);
+        lblTradesCount.setText(String.valueOf(filteredTrades.size()));
+      });
+
+      lblStatusText.setText(PENDING_MSG);
+      updateTradesInfoTask.start();
+    } catch (Exception ex) {
       pages.setPageCount(1);
       lblTradesCount.setText(String.valueOf(0));
+      lblStatusText.setText(ERROR_MSG);
     } finally {
       releaseUI();
     }
-  }
-
-  @Override
-  public void update(Observable o, Object arg) {
-    doApplyFilter();
   }
 
   @FXML
@@ -228,7 +232,8 @@ public class MainController extends AbstractUIController implements Observer {
 
   @FXML
   private void onTradeRefresh() {
-    doApplyFilter();
+    lockUI();
+    webEngine.reload();
   }
 
   @FXML
@@ -259,6 +264,7 @@ public class MainController extends AbstractUIController implements Observer {
         trade.setStartPrice(Objects.isNull(proposalData.getStartTradeVal()) ? tradeInfo.getInitialPrice()
             : proposalData.getStartTradeVal());
         tradeService.addTrade(trade);
+        doApplyFilter();
       }
     } catch (Throwable t) {
       log.error(String.format(ERROR_COMMON_LOG_MSG, t.getClass(), t.getMessage()));
@@ -344,6 +350,7 @@ public class MainController extends AbstractUIController implements Observer {
   }
 
   private void doApplyFilter() {
+    lockUI();
     prepareFilterOptions();
     pages.currentPageIndexProperty().removeListener(currentPageChangeListener);
     pages.setCurrentPageIndex(0);
@@ -362,11 +369,12 @@ public class MainController extends AbstractUIController implements Observer {
     dlg.setTitle("AutoMosreg");
     dlg.setHeaderText("Имя фильтра (под этим именем фильтр будет сохранен в БД)");
     dlg.setContentText("имя фильтра (не более 50 символов)");
-    String filterName = dlg.showAndWait().get();
-    if (filterName.isEmpty()) {
+    Optional<String> optFilterName = dlg.showAndWait();
+    if (!optFilterName.isPresent()) {
       UIController.showErrorMessage("Вы должны задать имя фильтра");
       return;
     }
+    String filterName = optFilterName.get();
     if (filterName.length() > 50) {
       UIController.showErrorMessage("Длина имени фильтра не может превышать 50 символов");
       return;
@@ -428,7 +436,7 @@ public class MainController extends AbstractUIController implements Observer {
         .setValue(fields.containsKey("FinishFrom") ? LocalDate.parse(fields.get("FinishFrom"), formatter) : null);
     dateFinishTo.setValue(fields.containsKey("FinishTo") ? LocalDate.parse(fields.get("FinishTo"), formatter) : null);
     cmbStatus.getSelectionModel().select(0);
-    for (StatusFilterOption status : cmbStatus.getItems()) {
+    for (TradeStatus status : cmbStatus.getItems()) {
       if (status.getCode() == Integer.parseInt(fields.getOrDefault("Status", "0"))) {
         cmbStatus.setValue(status);
       }

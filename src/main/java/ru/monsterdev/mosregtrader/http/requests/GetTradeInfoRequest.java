@@ -8,7 +8,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.protocol.HTTP;
 import ru.monsterdev.mosregtrader.http.TraderRequest;
-import ru.monsterdev.mosregtrader.model.dto.TradeFilter;
+import ru.monsterdev.mosregtrader.model.dto.TradeFilterDto;
 
 @Slf4j
 public class GetTradeInfoRequest extends TraderRequest {
@@ -19,7 +19,7 @@ public class GetTradeInfoRequest extends TraderRequest {
 
   public GetTradeInfoRequest(Long tradeId) {
     super();
-    TradeFilter filter = new TradeFilter();
+    TradeFilterDto filter = new TradeFilterDto();
     filter.setIsImmediate(false);
     filter.setOnlyTradesWithMyApplications(false);
     filter.setShowOnlyOwnTrades(false);

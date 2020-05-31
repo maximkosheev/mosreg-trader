@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import ru.monsterdev.mosregtrader.exceptions.MosregTraderException;
 import ru.monsterdev.mosregtrader.http.TraderResponse;
 import ru.monsterdev.mosregtrader.http.requests.GetTradeListRequest;
-import ru.monsterdev.mosregtrader.model.dto.TradeFilter;
+import ru.monsterdev.mosregtrader.model.dto.TradeFilterDto;
 import ru.monsterdev.mosregtrader.model.dto.TradesInfoDto;
 import ru.monsterdev.mosregtrader.services.HttpService;
 
@@ -27,13 +27,13 @@ public class GetFilteredTradesTask extends Task<TradesInfoDto> implements Trader
   @Autowired
   private HttpService httpService;
 
-  private TradeFilter filter;
+  private TradeFilterDto filter;
 
   public GetFilteredTradesTask() {
-    filter = new TradeFilter();
+    filter = new TradeFilterDto();
   }
 
-  public GetFilteredTradesTask(TradeFilter filter) {
+  public GetFilteredTradesTask(TradeFilterDto filter) {
     this.filter = filter;
   }
 
