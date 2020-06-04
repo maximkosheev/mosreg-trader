@@ -6,3 +6,5 @@ spring:
     hikari:
       maximum-pool-size: 2
 
+app:
+  remained-limit-time: 60000

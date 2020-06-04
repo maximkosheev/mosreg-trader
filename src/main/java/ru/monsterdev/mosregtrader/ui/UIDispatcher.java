@@ -39,6 +39,9 @@ public class UIDispatcher {
   @Autowired
   private UIComponent proposalDataView;
 
+  @Autowired
+  private UIComponent editProfileView;
+
   private Map<String, Scene> scenes = new HashMap<>();
 
   @PostConstruct
@@ -49,6 +52,7 @@ public class UIDispatcher {
     scenes.put("main", new Scene(mainView.getView(), 1024, 768));
     scenes.put("tradeFilter", new Scene(tradeFilterView.getView(), 860, 770));
     scenes.put("proposalData", new Scene(proposalDataView.getView(), 400, 245));
+    scenes.put("editProfile", new Scene(editProfileView.getView(), 600, 480));
   }
 
   public Stage getPrimaryStage() {
@@ -108,7 +112,16 @@ public class UIDispatcher {
     Stage stage = new Stage();
     stage.setScene(scenes.get("proposalData"));
     stage.setTitle("MosregTrader - Данные для заявок");
+    proposalDataView.getController().bootstrap();
     stage.showAndWait();
     return Optional.ofNullable(((ProposalController)proposalDataView.getController()).getProposalData());
+  }
+
+  public void showEditProfileUI() {
+    Stage stage = new Stage();
+    stage.setScene(scenes.get("editProfile"));
+    stage.setTitle("MosregTrader - Редактирование профиля");
+    editProfileView.getController().bootstrap();
+    stage.showAndWait();
   }
 }

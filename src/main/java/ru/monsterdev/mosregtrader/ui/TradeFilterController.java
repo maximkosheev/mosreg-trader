@@ -119,7 +119,7 @@ public class TradeFilterController extends AbstractUIController {
         setFilterFields(filter.getFields());
       }
     });
-    cmbFilters.getItems().addAll(dictionaryService.findAllFilters(FilterType.PROPOSAL));
+    cmbFilters.getItems().addAll(dictionaryService.findAllFilters(FilterType.TRADE));
     cmbStatus.getItems().addAll(TradeStatus.allFromMosreg());
     cmbStatus.getSelectionModel().select(0);
     cmbItemsPerPage.getItems().addAll(5, 10, 20, 50, 100);

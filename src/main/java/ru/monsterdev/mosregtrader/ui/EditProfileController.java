@@ -6,18 +6,21 @@ import javafx.fxml.FXML;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
+import javafx.stage.Stage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import ru.monsterdev.mosregtrader.domain.User;
 import ru.monsterdev.mosregtrader.model.CertificateInfo;
 import ru.monsterdev.mosregtrader.services.UserService;
-import ru.monsterdev.mosregtrader.utils.LicenseUtil;
 
-public class RegisterController extends AbstractUIController {
+public class EditProfileController extends AbstractUIController {
 
   @Autowired
   private UserService userService;
 
+  @FXML
+  GridPane rootPane;
   @FXML
   TextField edtName;
   @FXML
@@ -42,20 +45,33 @@ public class RegisterController extends AbstractUIController {
   @Autowired
   private UIDispatcher uiDispatcher;
 
+
   private CertificateInfo certificateInfo = null;
 
   @Override
   public void bootstrap() {
     cmbNDS.getItems().setAll(0, 6, 10, 18, 20);
+
+    User user = userService.getCurrentUser();
+
+    edtName.setText(user.getName());
+    edtCertificate.setText(user.getCertName());
+    edtEmail.setText(user.getEmail());
+    edtFax.setText(user.getFax());
+    edtPhone.setText(user.getPhone());
+    edtSurname.setText(user.getLastName());
+    edtFirstName.setText(user.getFirstName());
+    edtFatherName.setText(user.getFatherName());
+    chbNDS.setSelected(user.isUseNDS());
+    cmbNDS.getSelectionModel().select((Integer) user.getNDS());
+
+    certificateInfo = new CertificateInfo();
+    certificateInfo.setName(user.getCertName());
+    certificateInfo.setHash(user.getCertHash());
   }
 
   @FXML
-  private void onCancel() {
-    uiDispatcher.showLoginUI();
-  }
-
-  @FXML
-  private void onSelectCert(ActionEvent event) {
+  private void onSelectCert() {
     Optional<CertificateInfo> result = uiDispatcher.showCertificateListUI();
     result.ifPresent(certificate -> {
       this.certificateInfo = certificate;
@@ -93,29 +109,35 @@ public class RegisterController extends AbstractUIController {
   }
 
   @FXML
-  private void onRegister(ActionEvent event) {
-    if (!LicenseUtil.check(userService.getCount() + 1L)) {
-      UIController.showErrorMessage("Вы превысили ограничение по количеству пользователей,\n" +
-          "зарегистрированных в системе, установленное вашей лицензией.\n" +
-          "Обратитесь к диллеру для получения соответсвующей лицензии");
-      return;
-    }
+  private void onUpdate() {
     if (validate()) {
-      User newUser = new User();
-      newUser.setName(edtName.getText());
-      newUser.setCertName(certificateInfo.getName());
-      newUser.setCertHash(certificateInfo.getHash());
-      newUser.setLastName(edtSurname.getText());
-      newUser.setFirstName(edtFirstName.getText());
-      newUser.setFatherName(edtFatherName.getText());
-      newUser.setEmail(edtEmail.getText());
-      newUser.setFax(edtFax.getText());
-      newUser.setPhone(edtPhone.getText());
-      newUser.setUseNDS(chbNDS.isSelected());
-      newUser.setNDS(cmbNDS.getValue() != null ? cmbNDS.getValue() : 0);
-      userService.register(newUser);
-      uiDispatcher.showLoginUI();
+      userService.getCurrentUser().setName(edtName.getText());
+      userService.getCurrentUser().setCertName(certificateInfo.getName());
+      userService.getCurrentUser().setCertHash(certificateInfo.getHash());
+      userService.getCurrentUser().setLastName(edtSurname.getText());
+      userService.getCurrentUser().setFirstName(edtFirstName.getText());
+      userService.getCurrentUser().setFatherName(edtFatherName.getText());
+      userService.getCurrentUser().setEmail(edtEmail.getText());
+      userService.getCurrentUser().setFax(edtFax.getText());
+      userService.getCurrentUser().setPhone(edtPhone.getText());
+      userService.getCurrentUser().setUseNDS(chbNDS.isSelected());
+      userService.getCurrentUser().setNDS(cmbNDS.getValue() != null ? cmbNDS.getValue() : 0);
+      userService.update();
+      close();
     }
   }
 
+  @FXML
+  private void onCancel() {
+    close();
+  }
+
+
+  private Stage getStage() {
+    return (Stage)rootPane.getScene().getWindow();
+  }
+
+  private void close() {
+    getStage().close();
+  }
 }

@@ -1,6 +1,7 @@
 package ru.monsterdev.mosregtrader.services;
 
 import java.util.List;
+import lombok.NonNull;
 import ru.monsterdev.mosregtrader.domain.Trade;
 import ru.monsterdev.mosregtrader.exceptions.MosregTraderException;
 import ru.monsterdev.mosregtrader.model.TradeFilter;
@@ -21,6 +22,13 @@ public interface TradeService {
   List<Trade> findAll(TradeFilter tradeFilter);
 
   /**
+   * Возвращает закупку по её идентификатору (имеется ввиду идентификатору в приложении, не площадки)
+   * @param tradeId идентификатор
+   * @return закупка
+   */
+  Trade getTradeById(long tradeId);
+
+  /**
    * Добавить новую закупку trade к списку закупок пользователя user
    * @param trade закупка
    * @return закупка, сохраненная в базе
@@ -28,6 +36,11 @@ public interface TradeService {
    */
   Trade addTrade(Trade trade) throws MosregTraderException;
 
+  /**
+   * Удаляет закупку с идентификатором tradeId
+   * @param tradeId идентификатор закупки
+   */
+  void deleteTrade(long tradeId);
 
   /**
    * Выполняет загрузку скачивание информации о закупке
@@ -46,4 +59,16 @@ public interface TradeService {
    * Обновление важной информации по закупкам
    */
   void updateTrades(List<Trade> trades) throws MosregTraderException;
+
+  /**
+   * Обновление цены предложений по закупкам
+   * @param trades закупки
+   */
+  void updateProposalsPrice(List<Trade> trades) throws MosregTraderException;
+
+  /**
+   * Обновление информации о закупке в локальной базе
+   * @param trade закупка
+   */
+  void saveTrade(@NonNull Trade trade);
 }

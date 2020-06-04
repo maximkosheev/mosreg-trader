@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import ru.monsterdev.mosregtrader.constants.Money;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -42,5 +43,9 @@ public class ProductDto {
     else {
       return price.multiply(quantity);
     }
+  }
+
+  public BigDecimal getMinCost() {
+    return Money.MIN_PRICE.multiply(quantity);
   }
 }

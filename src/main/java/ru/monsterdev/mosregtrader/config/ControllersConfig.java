@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import ru.monsterdev.mosregtrader.ui.CertificateListController;
+import ru.monsterdev.mosregtrader.ui.EditProfileController;
 import ru.monsterdev.mosregtrader.ui.LoginController;
 import ru.monsterdev.mosregtrader.ui.ProposalController;
 import ru.monsterdev.mosregtrader.ui.RegisterController;
@@ -59,6 +60,11 @@ public class ControllersConfig {
     return loadComponent("/ru/monsterdev/mosregtrader/ui/trades_filter.fxml");
   }
 
+  @Bean(name = "editProfileView")
+  public UIComponent getEditProfileView() {
+    return loadComponent("/ru/monsterdev/mosregtrader/ui/edit_profile.fxml");
+  }
+
   @Bean
   public MainController getMainController() {
     return (MainController)getMainView().getController();
@@ -87,5 +93,10 @@ public class ControllersConfig {
   @Bean
   public ProposalController getProposalController() {
     return (ProposalController)getProposalDataView().getController();
+  }
+
+  @Bean
+  public EditProfileController getEditProfileController() {
+    return (EditProfileController)getEditProfileView().getController();
   }
 }

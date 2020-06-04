@@ -16,6 +16,11 @@ public interface UserService {
   User register(User newUser);
 
   /**
+   * Выполняет обновление информации о текущем пользователе
+   */
+  void update();
+
+  /**
    * Устанавливает текущего пользователя
    */
   void setCurrentUser(User user);
@@ -27,4 +32,5 @@ public interface UserService {
 
   /** Возвращает количество зарегистрированных пользователей */
   long getCount();
+
 }

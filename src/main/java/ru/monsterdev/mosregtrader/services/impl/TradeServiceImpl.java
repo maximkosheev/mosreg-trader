@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NonNull;
@@ -28,6 +29,7 @@ import ru.monsterdev.mosregtrader.http.requests.GetTradeInfoRequest;
 import ru.monsterdev.mosregtrader.http.requests.GetTradePageRequest;
 import ru.monsterdev.mosregtrader.http.requests.GetUpdateProposalPageRequest;
 import ru.monsterdev.mosregtrader.http.requests.PublishProposalRequest;
+import ru.monsterdev.mosregtrader.http.requests.UpdateProposalPriceRequest;
 import ru.monsterdev.mosregtrader.model.SupplierProposal;
 import ru.monsterdev.mosregtrader.model.TradeFilter;
 import ru.monsterdev.mosregtrader.model.dto.BestProposalInfoDto;
@@ -60,6 +62,8 @@ public class TradeServiceImpl implements TradeService {
   @Autowired
   private CalcPriceAlgorithm calcPriceAlgorithm;
 
+  private final BigDecimal tradeReduction = new BigDecimal("1.00");
+
   @Override
   public List<Trade> findAll() {
     return tradeRepository.findAll(userService.getCurrentUser());
@@ -79,8 +83,24 @@ public class TradeServiceImpl implements TradeService {
   }
 
   @Override
+  public Trade getTradeById(long tradeId) {
+    for (Trade trade : tradeRepository.findAll(userService.getCurrentUser())) {
+      if (trade.getTradeId() == tradeId) {
+        return trade;
+      }
+    }
+    return null;
+  }
+
+  @Override
   public Trade addTrade(Trade trade) throws MosregTraderException {
     return tradeRepository.add(userService.getCurrentUser(), fetchTrade(trade));
+  }
+
+
+  @Override
+  public void deleteTrade(long tradeId) {
+    tradeRepository.delete(userService.getCurrentUser(), tradeId);
   }
 
   @Override
@@ -166,6 +186,34 @@ public class TradeServiceImpl implements TradeService {
     }
   }
 
+  @Override
+  public void updateProposalsPrice(List<Trade> trades) throws MosregTraderException {
+    try {
+      for (Trade trade : trades) {
+        if (trade.getProposal() != null && trade.getProposal().getStatus() == ProposalStatus.ACTIVE) {
+          BestProposalInfoDto bestProposalInfo = fetchBestProposalInfo(trade);
+          // Если лучшее предложение не наше, то обновляем наше предложение
+          if (bestProposalInfo != null && !Objects.equals(bestProposalInfo.getBestProposalId(), trade.getProposal().getId())) {
+            log.debug("По закупке {} цена лучшего предложения: {}, моего {} - снижаем цену", trade.getTradeId(),
+                bestProposalInfo.getBestPrice().toPlainString(), trade.getPrice().toPlainString());
+            try {
+              updateProposalPrice(trade, bestProposalInfo);
+            } catch (MosregTraderException ex) {
+              log.error("Failed to update proposal price for trade {}, {}", trade.getTradeId(), ex);
+            }
+          }
+        }
+      }
+    } catch (Exception ex) {
+      log.error("", ex);
+      throw ex;
+    }
+  }
+
+  @Override
+  public void saveTrade(@NonNull Trade trade) {
+    tradeRepository.save(trade);
+  }
 
   private TradeInfoDto fetchTradeInfo(@NonNull Trade trade) throws MosregTraderException {
     try {
@@ -309,6 +357,31 @@ public class TradeServiceImpl implements TradeService {
     } catch (Exception ex) {
       log.error("", ex);
       throw new MosregTraderException(String.format("Ошибка обработки информации о предложениях по закупке %d", trade.getTradeId()));
+    }
+  }
+
+  private void updateProposalPrice(@NonNull Trade trade, @NonNull BestProposalInfoDto bestProposalInfo) throws MosregTraderException {
+    BigDecimal newProposalPrice = bestProposalInfo.getBestPrice().subtract(tradeReduction);
+    if (newProposalPrice.compareTo(trade.getMinTradeVal()) < 0) {
+      log.error("По закупке {} достигнута минимальная установленная цена. Пороговое значение: {}, требуется: {}",
+          trade.getTradeId(), trade.getMinTradeVal().toPlainString(), newProposalPrice.toPlainString());
+      throw new MosregTraderException("Достигнута минимальная цена");
+    }
+    // А можно ли вообще сделать предложение с такой низкой суммарной стоимостью
+    BigDecimal tradeMinPrice = trade.getProposal().getProducts().stream().map(ProductDto::getMinCost)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+    if (newProposalPrice.compareTo(tradeMinPrice) < 0) {
+      log.error("По закупке невозможно установить цену предложения {} ибо минимальная цена по данной закупке {}",
+          trade.getTradeId(), newProposalPrice.toPlainString(), tradeMinPrice.toPlainString());
+      throw new MosregTraderException("Невозможно установить требуемую цену");
+    }
+    log.debug("Снижаем цену предложения по закупке {} до {}", trade.getTradeId(), newProposalPrice.toPlainString());
+    calcPriceAlgorithm.doCalc(trade.getProposal().getProducts(), newProposalPrice);
+    // отправка запроса на изменение торгового предложения
+    TraderResponse response = httpService.sendRequest(new UpdateProposalPriceRequest(trade));
+    if (response.getCode() != HttpStatus.SC_OK) {
+      log.error("Failed to update proposal price: code {}, message {}", response.getCode(), response.getEntity());
+      throw new MosregTraderException("Ошибка обновления цены предложения на площадке");
     }
   }
 }

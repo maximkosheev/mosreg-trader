@@ -53,20 +53,6 @@
                         </MenuItem>
                      </items>
                   </Menu>
-                  <Menu mnemonicParsing="false" text="Аукцион">
-                     <items>
-                        <MenuItem fx:id="actTenderStart" mnemonicParsing="false" onAction="#onTenderStart" text="Начать">
-                           <accelerator>
-                              <KeyCodeCombination alt="UP" code="F5" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
-                           </accelerator>
-                        </MenuItem>
-                        <MenuItem fx:id="actTenderStop" mnemonicParsing="false" onAction="#onTenderStop" text="Остановить">
-                           <accelerator>
-                              <KeyCodeCombination alt="UP" code="F8" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
-                           </accelerator>
-                        </MenuItem>
-                     </items>
-                  </Menu>
                   <Menu mnemonicParsing="false" text="Профиль">
                      <items>
                         <MenuItem fx:id="actProfile" mnemonicParsing="false" onAction="#onProfile" text="Учетные данные..." />

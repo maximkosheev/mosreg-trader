@@ -3,9 +3,14 @@ package ru.monsterdev.mosregtrader.model.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Set;
 import lombok.Data;
+import ru.monsterdev.mosregtrader.utils.converters.DateDeserializers;
+import ru.monsterdev.mosregtrader.utils.converters.DateSerializers;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -17,16 +22,10 @@ public class ProposalEditPriceDto {
   private Long tradeId;
   @JsonProperty("TradeName")
   private String tradeName;
-  // В это поле передается дата-время при этом может передаваться как с милисекундами так и нет. В этом случае можно
-  // было бы воспользоваться шаблоном "yyyy-MM-dd'T'HH:mm:ss[.SSS]X, но такой шаблон будет работать только
-  // при десериалации времени, где указаны миллисекунды из 3 цифр, а мне может быть передано и одна, и две, и три цифры
-  // поэтому воспользуемся кастомным десериализатором
-  /*
   @JsonProperty("FillingApplicationEndDate")
-  @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "Europe/Moscow")
-  @JsonDeserialize(using = DateDeserializer.class)
-  private Date fillEndDate;
-  */
+  @JsonDeserialize(using = DateDeserializers.LocalDateTimeDeserializer.class)
+  @JsonSerialize(using = DateSerializers.LocalDateTimeSerializer.class)
+  private LocalDateTime fillEndDate;
   @JsonProperty("PlanedDealSignDate")
   @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "Europe/Moscow")
   private String signDate;

@@ -56,8 +56,6 @@ public class MainController extends AbstractUIController {
   private static final String IDLE_MSG = "Простой";
   private static final String ERROR_MSG = "Ошибка!";
 
-  private static final Integer UPDATE_MAIN_VIEW_TICK = 60 * 1000;
-
   @FXML
   private StackPane rootPane;
   @FXML
@@ -274,26 +272,30 @@ public class MainController extends AbstractUIController {
 
   @FXML
   private void onTradeEdit() {
-    /*
     try {
+      JSObject mainView = (JSObject) webEngine.executeScript("mainView");
+      String result = mainView.call("getSelected").toString();
+      String[] ids = result.split(",");
+
+      if (ids.length < 1) {
+        throw new MosregTraderException("Не выбрано ни одной закупки для удаления");
+      }
+
       Optional<ProposalData> proposalData = uiDispatcher.showProposalDataUI();
       if (!proposalData.isPresent()) {
         return;
       }
-      JSObject mainView = (JSObject) webEngine.executeScript("mainView");
-      String result = mainView.call("getSelected").toString();
-      String[] ids = result.split(",");
       for (String id : ids) {
-        Trade trade = userService.getCurrentUser().getTrade(Long.parseLong(id));
+        Trade trade = tradeService.getTradeById(Long.parseLong(id));
         trade.setMinTradeVal(proposalData.get().getMinTradeVal());
+        trade.setStartPrice(proposalData.get().getStartTradeVal());
         trade.setActivateTime(proposalData.get().getActivateTime());
+        tradeService.saveTrade(trade);
       }
-      //userService.update();
       doApplyFilter();
-    } catch (Throwable t) {
-      UIController.showErrorMessage(t.getMessage());
+    } catch (Exception ex) {
+      UIController.showErrorMessage(ex.getMessage());
     }
-    */
   }
 
   @FXML
@@ -310,9 +312,8 @@ public class MainController extends AbstractUIController {
       }
       String[] ids = result.split(",");
       for (String id : ids) {
-        //userService.getCurrentUser().removeTrade(Long.parseLong(id));
+        tradeService.deleteTrade(Long.parseLong(id));
       }
-      //userService.update();
       doApplyFilter();
     } catch (Throwable t) {
       UIController.showErrorMessage(t.getMessage());
@@ -331,17 +332,8 @@ public class MainController extends AbstractUIController {
   */
 
   @FXML
-  private void onTenderStart() {
-  }
-
-  @FXML
-  private void onTenderStop() {
-    //
-  }
-
-  @FXML
   private void onProfile() {
-    //EditProfileController.showUI();
+    uiDispatcher.showEditProfileUI();
   }
 
   @FXML

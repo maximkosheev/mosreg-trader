@@ -35,6 +35,11 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
+  public void update() {
+    userRepository.save(currentUser);
+  }
+
+  @Override
   public void setCurrentUser(User user) {
     this.currentUser = user;
   }
