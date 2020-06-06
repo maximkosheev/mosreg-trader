@@ -22,12 +22,17 @@ public class ProposalController extends AbstractUIController {
   @FXML
   private TextField edtActivateTime;
 
-  private boolean isOK = false;
+  private boolean isOK;
 
   private ProposalData proposalData = new ProposalData();
 
   private Stage getStage() {
     return (Stage)rootPane.getScene().getWindow();
+  }
+
+  @Override
+  public void bootstrap() {
+    isOK = false;
   }
 
   @FXML

@@ -57,6 +57,12 @@ public class LoginController extends AbstractUIController {
   private LoginTask loginTask;
 
   @Override
+  public void initialize() {
+    btnCancel.setOnAction(event -> uiDispatcher.close());
+    waitIndicator = new WaitIndicator();
+  }
+
+  @Override
   public void bootstrap() {
     List<User> users = userService.findAll();
 
@@ -64,10 +70,8 @@ public class LoginController extends AbstractUIController {
       UIController.showErrorMessage("Превышено ограничение лицензии на количество пользователей");
       return;
     }
+    lstUsers.getItems().clear();
     lstUsers.getItems().addAll(users);
-
-    btnCancel.setOnAction(event -> uiDispatcher.close());
-    waitIndicator = new WaitIndicator();
   }
 
   @FXML

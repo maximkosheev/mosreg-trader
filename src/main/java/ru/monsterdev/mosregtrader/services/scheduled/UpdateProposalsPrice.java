@@ -39,7 +39,7 @@ public class UpdateProposalsPrice implements Runnable {
           .filter(trade -> {
             long duration = Duration.between(LocalDateTime.now(), trade.getEndDT()).toMillis();
             return (duration > 0 && duration <= remainedLimit) &&
-                (trade.getProposal() == null) &&
+                (trade.getProposal() != null) &&
                 (trade.getStatus() == TradeStatus.SUGGESTIONS);
           })
           .collect(Collectors.toList());

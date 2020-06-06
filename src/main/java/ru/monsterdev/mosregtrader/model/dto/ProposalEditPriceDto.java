@@ -26,9 +26,9 @@ public class ProposalEditPriceDto {
   @JsonDeserialize(using = DateDeserializers.LocalDateTimeDeserializer.class)
   @JsonSerialize(using = DateSerializers.LocalDateTimeSerializer.class)
   private LocalDateTime fillEndDate;
-  @JsonProperty("PlanedDealSignDate")
-  @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "Europe/Moscow")
-  private String signDate;
+  //@JsonProperty("PlanedDealSignDate")
+  //@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "Europe/Moscow")
+  //private String signDate;
   @JsonProperty("InitialPrice")
   BigDecimal initialPrice;
   @JsonProperty("Products")

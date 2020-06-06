@@ -7,4 +7,4 @@ spring:
       maximum-pool-size: 2
 
 app:
-  remained-limit-time: 60000
+  remained-limit-time: 86400000

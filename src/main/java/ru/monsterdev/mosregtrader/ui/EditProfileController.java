@@ -49,9 +49,12 @@ public class EditProfileController extends AbstractUIController {
   private CertificateInfo certificateInfo = null;
 
   @Override
-  public void bootstrap() {
+  public void initialize() {
     cmbNDS.getItems().setAll(0, 6, 10, 18, 20);
+  }
 
+  @Override
+  public void bootstrap() {
     User user = userService.getCurrentUser();
 
     edtName.setText(user.getName());

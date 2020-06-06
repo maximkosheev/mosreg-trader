@@ -110,8 +110,7 @@ public class TradeFilterController extends AbstractUIController {
   List<TradeInfoDto> selectedTrades = new ArrayList<>();
 
   @Override
-  public void bootstrap() {
-    lblTradesCount.setText(START_MSG);
+  public void initialize() {
     cmbFilters.setOnAction(value -> {
       FilterOption filter = cmbFilters.getValue();
       if (filter != null) {
@@ -119,12 +118,13 @@ public class TradeFilterController extends AbstractUIController {
         setFilterFields(filter.getFields());
       }
     });
-    cmbFilters.getItems().addAll(dictionaryService.findAllFilters(FilterType.TRADE));
     cmbStatus.getItems().addAll(TradeStatus.allFromMosreg());
     cmbStatus.getSelectionModel().select(0);
+
+    cmbItemsPerPage.setOnAction(event -> doFilter(0));
+
     cmbItemsPerPage.getItems().addAll(5, 10, 20, 50, 100);
     cmbItemsPerPage.setValue(100);
-    cmbItemsPerPage.setOnAction(event -> doFilter(0));
 
     CheckBox chbSelectAll = new CheckBox();
     chbSelectAll.selectedProperty().addListener((observable, oldValue, newValue) ->
@@ -178,6 +178,13 @@ public class TradeFilterController extends AbstractUIController {
     currentPageChangeListener = (observable, oldValue, newValue) -> doFilter(newValue.intValue());
     tblTrades.getColumns().addAll(c0, c1, c2, c3, c4, c5, c6, c7);
     waitIndicator = new WaitIndicator();
+  }
+
+  @Override
+  public void bootstrap() {
+    lblTradesCount.setText(START_MSG);
+    cmbFilters.getItems().clear();
+    cmbFilters.getItems().addAll(dictionaryService.findAllFilters(FilterType.TRADE));
 
     onFilterApply();
   }

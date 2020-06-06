@@ -71,4 +71,12 @@ public interface TradeService {
    * @param trade закупка
    */
   void saveTrade(@NonNull Trade trade);
+
+  /**
+   * Возвращает true, если среди закупок пользователя уже есть одна или несколько закупок, идентификаторы которых
+   * перечислены в списке tradeIds
+   * @param tradeIds список идентификаторов, которые нужно проверить
+   * @return true/false
+   */
+  boolean isContainAnyOf(List<Long> tradeIds);
 }

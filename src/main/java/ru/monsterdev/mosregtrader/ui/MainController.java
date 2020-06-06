@@ -1,5 +1,6 @@
 package ru.monsterdev.mosregtrader.ui;
 
+import com.sun.deploy.uitoolkit.impl.fx.HostServicesFactory;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import javafx.beans.value.ChangeListener;
 import javafx.concurrent.Worker;
@@ -32,6 +34,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.StringUtils;
+import ru.monsterdev.mosregtrader.MosregTraderApplication;
 import ru.monsterdev.mosregtrader.domain.FilterOption;
 import ru.monsterdev.mosregtrader.domain.Trade;
 import ru.monsterdev.mosregtrader.enums.FilterType;
@@ -43,6 +46,7 @@ import ru.monsterdev.mosregtrader.model.dto.TradeInfoDto;
 import ru.monsterdev.mosregtrader.services.DictionaryService;
 import ru.monsterdev.mosregtrader.services.TradeService;
 import ru.monsterdev.mosregtrader.services.scheduled.SubmitProposalService;
+import ru.monsterdev.mosregtrader.services.scheduled.UpdateProposalsPrice;
 import ru.monsterdev.mosregtrader.services.scheduled.UpdateTradesInfoService;
 import ru.monsterdev.mosregtrader.tasks.UpdateTradesInfoTask;
 import ru.monsterdev.mosregtrader.ui.control.WaitIndicator;
@@ -104,9 +108,24 @@ public class MainController extends AbstractUIController {
   private SubmitProposalService submitProposalService;
   @Autowired
   private UpdateTradesInfoService updateTradesInfoService;
+  @Autowired
+  private UpdateProposalsPrice updateProposalsPrice;
 
   @Override
-  public void bootstrap() {
+  public void initialize() {
+    cmbFilters.setOnAction(value -> {
+      FilterOption filter = cmbFilters.getValue();
+      if (filter != null) {
+        clearFilter(true);
+        setFilterFields(filter.getFields());
+      }
+    });
+    cmbStatus.getItems().addAll(TradeStatus.allFromLocal());
+    cmbStatus.getSelectionModel().select(0);
+
+    cmbItemsPerPage.getItems().addAll(5, 10, 20, 50, 100);
+    cmbItemsPerPage.setValue(10);
+    cmbItemsPerPage.setOnAction(event -> doApplyFilter());
 
     webEngine = mainView.getEngine();
     webEngine.getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
@@ -115,33 +134,24 @@ public class MainController extends AbstractUIController {
     JSObject window = (JSObject) webEngine.executeScript("window");
     window.setMember("app", this);
 
-    lblStatusText.setText(IDLE_MSG);
-    cmbFilters.setOnAction(value -> {
-      FilterOption filter = cmbFilters.getValue();
-      if (filter != null) {
-        clearFilter(true);
-        setFilterFields(filter.getFields());
-      }
-    });
-    cmbFilters.getItems().addAll(dictionaryService.findAllFilters(FilterType.PROPOSAL));
-
-    cmbStatus.getItems().addAll(TradeStatus.allFromLocal());
-    cmbStatus.getSelectionModel().select(0);
-
-    cmbItemsPerPage.getItems().addAll(5, 10, 20, 50, 100);
-    cmbItemsPerPage.setValue(10);
-    cmbItemsPerPage.setOnAction(event -> doApplyFilter());
-
     waitIndicator = new WaitIndicator();
 
     currentPageChangeListener = (observable, oldValue, newValue) -> doApplyFilter();
     pages.currentPageIndexProperty().addListener(currentPageChangeListener);
+  }
+
+  @Override
+  public void bootstrap() {
+    lblStatusText.setText(IDLE_MSG);
+    cmbFilters.getItems().clear();
+    cmbFilters.getItems().addAll(dictionaryService.findAllFilters(FilterType.PROPOSAL));
 
     webEngine.load(getClass().getResource("/ru/monsterdev/mosregtrader/ui/mainView.html").toExternalForm());
 
     threadPoolTaskScheduler.scheduleWithFixedDelay(submitProposalService, 60 * 1000);
     threadPoolTaskScheduler.scheduleWithFixedDelay(updateTradesInfoService, Date.from(LocalDateTime.now().plusMinutes(60)
         .atZone(ZoneId.systemDefault()).toInstant()), 60 * 60 * 1000);
+    threadPoolTaskScheduler.scheduleWithFixedDelay(updateProposalsPrice, 1 * 60 * 1000);
   }
 
   private void prepareFilterOptions() {
@@ -212,7 +222,6 @@ public class MainController extends AbstractUIController {
       pages.setPageCount(1);
       lblTradesCount.setText(String.valueOf(0));
       lblStatusText.setText(ERROR_MSG);
-    } finally {
       releaseUI();
     }
   }
@@ -238,6 +247,12 @@ public class MainController extends AbstractUIController {
   private void onTradeNew() {
     Optional<List<TradeInfoDto>> tradeInfoList = uiDispatcher.showTradeFilterUI();
     if (!tradeInfoList.isPresent()) {
+      return;
+    }
+
+    // проверка выбранных закупок уже в списке выбранных закупок
+    if (tradeService.isContainAnyOf(tradeInfoList.get().stream().map(TradeInfoDto::getId).collect(Collectors.toList()))) {
+      UIController.showErrorMessage("Некоторые из выбранных закупок уже находятся в обработке");
       return;
     }
 
@@ -275,8 +290,11 @@ public class MainController extends AbstractUIController {
     try {
       JSObject mainView = (JSObject) webEngine.executeScript("mainView");
       String result = mainView.call("getSelected").toString();
-      String[] ids = result.split(",");
+      if (result.isEmpty()) {
+        throw new MosregTraderException("Выберете закупки, которые нужно редактировать, а затем повторите операцию");
+      }
 
+      String[] ids = result.split(",");
       if (ids.length < 1) {
         throw new MosregTraderException("Не выбрано ни одной закупки для удаления");
       }
@@ -320,7 +338,6 @@ public class MainController extends AbstractUIController {
     }
   }
 
-  /*
   public void onOpenTradePage(Integer tradeId) {
     if (tradeId != null) {
       HostServicesFactory.getInstance(MosregTraderApplication.getInstance())
@@ -329,7 +346,6 @@ public class MainController extends AbstractUIController {
       UIController.showErrorMessage("Ошибка при попытке открыть окно браузера по данной закупке");
     }
   }
-  */
 
   @FXML
   private void onProfile() {

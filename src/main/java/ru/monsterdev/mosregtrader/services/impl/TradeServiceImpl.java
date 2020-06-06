@@ -115,7 +115,8 @@ public class TradeServiceImpl implements TradeService {
       trade.setNmc(tradeInfo.getInitialPrice());
       trade.setProducts(fetchTradeItems(trade));
       ProposalInfoDto proposalInfo = fetchTradeProposalInfo(trade);
-      if (proposalInfo != null) {
+      // TODO!!!
+      if (proposalInfo != null && ProposalStatus.valueOf(proposalInfo.getStatus()) != ProposalStatus.REVOKED) {
         Proposal proposal = new Proposal();
         proposal.setId(proposalInfo.getProposalId());
         proposal.setStatus(ProposalStatus.valueOf(proposalInfo.getStatus()));
@@ -213,6 +214,13 @@ public class TradeServiceImpl implements TradeService {
   @Override
   public void saveTrade(@NonNull Trade trade) {
     tradeRepository.save(trade);
+  }
+
+  @Override
+  public boolean isContainAnyOf(List<Long> tradeIds) {
+    return tradeRepository.findAll(userService.getCurrentUser()).stream()
+        .map(Trade::getTradeId)
+        .anyMatch(tradeIds::contains);
   }
 
   private TradeInfoDto fetchTradeInfo(@NonNull Trade trade) throws MosregTraderException {

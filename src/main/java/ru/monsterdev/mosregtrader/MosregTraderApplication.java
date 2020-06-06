@@ -36,20 +36,24 @@ import ru.monsterdev.mosregtrader.utils.LicenseUtil;
 public class MosregTraderApplication extends AbstractApplication {
 
   private static Server db;
+  private static MosregTraderApplication instance;
 
   @Autowired
   private UIDispatcher uiDispatcher;
 
+  public static MosregTraderApplication getInstance() {
+    return instance;
+  }
+
   @Override
   public void start(Stage primaryStage) throws Exception {
+    instance = this;
     uiDispatcher.setPrimaryStage(primaryStage);
     primaryStage.setOnCloseRequest(event -> {
       db.stop();
     });
     uiDispatcher.showLoginUI();
   }
-
-  public static int work_thread_timeout;
 
   public static void main(String[] args) {
     System.setProperty("com.sun.security.enableCRLDP", "true");
@@ -72,7 +76,6 @@ public class MosregTraderApplication extends AbstractApplication {
     CommandLineParser parser = new DefaultParser();
     try {
       CommandLine line = parser.parse(options, args);
-      work_thread_timeout = Integer.parseInt(line.getOptionValue("sleep", "6000"));
       // нужно сгенерировать лицензионный ключ (максимальное кол-во зарегистрированных аккаунтов указывается в параметре limit)
       if (line.hasOption("license")) {
         Integer limit = Integer.parseInt(line.getOptionValue("limit", "1"));
@@ -95,7 +98,6 @@ public class MosregTraderApplication extends AbstractApplication {
       db = Server.createTcpServer("-tcpAllowOthers", "-tcpPort", "9092", "-trace").start();
       log.trace("Database started at: " + db.getURL());
       log.trace("Stating application");
-      log.trace("Starting with trades update interval {}", work_thread_timeout);
       launchApp(MosregTraderApplication.class, args);
     } catch (ParseException | IOException | SQLException | MosregTraderException ex) {
       if (db != null) {

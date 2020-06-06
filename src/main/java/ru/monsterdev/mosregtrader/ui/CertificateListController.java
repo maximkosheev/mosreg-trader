@@ -27,8 +27,7 @@ public class CertificateListController extends AbstractUIController {
   private CryptoService cryptoService;
 
   @Override
-  @SuppressWarnings("unchecked")
-  public void bootstrap() {
+  public void initialize() {
     TableColumn<CertificateInfo, String> c1 = new TableColumn<>("Название");
     TableColumn<CertificateInfo, String> c2 = new TableColumn<>("Срок действия");
     c1.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -36,6 +35,12 @@ public class CertificateListController extends AbstractUIController {
     c1.prefWidthProperty().bind(tblCertificates.widthProperty().multiply(0.5));
     c2.prefWidthProperty().bind(tblCertificates.widthProperty().multiply(0.5));
     tblCertificates.getColumns().setAll(c1, c2);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public void bootstrap() {
+    tblCertificates.getItems().clear();
     tblCertificates.getItems().setAll(cryptoService.getCertificatesList());
   }
 

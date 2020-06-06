@@ -45,7 +45,7 @@ public class RegisterController extends AbstractUIController {
   private CertificateInfo certificateInfo = null;
 
   @Override
-  public void bootstrap() {
+  public void initialize() {
     cmbNDS.getItems().setAll(0, 6, 10, 18, 20);
   }
 
