@@ -157,9 +157,10 @@ public class StringUtil {
       return proposalProducts;
     }
     String productsInfo = matcher.group(1);
-    productsInfo = productsInfo.replaceAll("\\\\{3}", "~~~");
+
+    productsInfo = productsInfo.replaceAll("\\\\{3}\"", "'");
     productsInfo = productsInfo.replaceAll("\\\\\"", "\"");
-    productsInfo = productsInfo.replaceAll("~~~", "\\\\");
+
     try {
       ObjectMapper mapper = new ObjectMapper();
       ProposalEditPriceDto dto = mapper.readValue(productsInfo, ProposalEditPriceDto.class);
