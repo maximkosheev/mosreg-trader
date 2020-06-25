@@ -1,5 +1,6 @@
 package ru.monsterdev.mosregtrader.domain;
 
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 import lombok.Data;
@@ -26,4 +27,11 @@ public class Proposal {
    * Торговые позиции по данному предложению
    */
   private Set<ProductDto> products = new HashSet<>();
+
+  public BigDecimal getPrice() {
+    return getProducts().stream()
+        .map(ProductDto::getSumm)
+        .reduce(BigDecimal.ZERO, BigDecimal::add)
+        .setScale(2);
+  }
 }

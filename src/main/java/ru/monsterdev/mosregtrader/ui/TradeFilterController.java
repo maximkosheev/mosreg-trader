@@ -1,5 +1,6 @@
 package ru.monsterdev.mosregtrader.ui;
 
+import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -151,10 +152,8 @@ public class TradeFilterController extends AbstractUIController {
     c3.setCellFactory(new MultilineCellFactory());
     c3.prefWidthProperty().bind(tblTrades.widthProperty().subtract(34).multiply(0.305));
 
-    TableColumn<TradeViewItem, String> c4 = new TableColumn<>("НМЦ");
+    TableColumn<TradeViewItem, BigDecimal> c4 = new TableColumn<>("НМЦ");
     c4.setCellValueFactory(new PropertyValueFactory<>("initialPrice"));
-    c4.setCellValueFactory(
-        param -> new SimpleStringProperty(param.getValue().getInitialPrice().setScale(2, RoundingMode.UP).toString()));
     c4.setStyle("-fx-alignment: CENTER;");
     c4.prefWidthProperty().bind(tblTrades.widthProperty().subtract(34).multiply(0.05));
 

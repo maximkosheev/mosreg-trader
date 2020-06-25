@@ -125,18 +125,22 @@ public class MainController extends AbstractUIController {
 
     cmbItemsPerPage.getItems().addAll(5, 10, 20, 50, 100);
     cmbItemsPerPage.setValue(10);
-    cmbItemsPerPage.setOnAction(event -> doApplyFilter());
+    cmbItemsPerPage.setOnAction(event -> webEngine.reload());
 
     webEngine = mainView.getEngine();
     webEngine.getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
-      if (newValue == Worker.State.SUCCEEDED) { showTrades(); }
+      if (newValue == Worker.State.SUCCEEDED) {
+        List<Trade> filteredTrades = filterTrades();
+        updatePagination(filteredTrades);
+        printProposals(filteredTrades);
+      }
     });
     JSObject window = (JSObject) webEngine.executeScript("window");
     window.setMember("app", this);
 
     waitIndicator = new WaitIndicator();
 
-    currentPageChangeListener = (observable, oldValue, newValue) -> doApplyFilter();
+    currentPageChangeListener = (observable, oldValue, newValue) -> webEngine.reload();
     pages.currentPageIndexProperty().addListener(currentPageChangeListener);
   }
 
@@ -151,7 +155,7 @@ public class MainController extends AbstractUIController {
     threadPoolTaskScheduler.scheduleWithFixedDelay(submitProposalService, 60 * 1000);
     threadPoolTaskScheduler.scheduleWithFixedDelay(updateTradesInfoService, Date.from(LocalDateTime.now().plusMinutes(60)
         .atZone(ZoneId.systemDefault()).toInstant()), 60 * 60 * 1000);
-    threadPoolTaskScheduler.scheduleWithFixedDelay(updateProposalsPrice, 1 * 60 * 1000);
+    threadPoolTaskScheduler.scheduleWithFixedDelay(updateProposalsPrice, 1000);
   }
 
   private void prepareFilterOptions() {
@@ -180,50 +184,27 @@ public class MainController extends AbstractUIController {
     }
   }
 
+  private List<Trade> filterTrades() {
+    int countPerPage = cmbItemsPerPage.getValue();
+    int startIndex = pages.getCurrentPageIndex() * countPerPage;
+    // выборка закупок в соответствии с фильтром и текущей страницей
+    return tradeService.findAll(filterOptions).stream()
+        .skip(startIndex).limit(startIndex + countPerPage)
+        .collect(Collectors.toList());
+  }
+
   private void printProposals(List<Trade> trades) {
     List<ProposalViewItem> items = trades.stream().map(ProposalViewItem::new).collect(Collectors.toList());
 
     JSObject mainView = (JSObject) webEngine.executeScript("mainView");
     mainView.call("clearProposals");
     mainView.call("showProposals", items);
+    releaseUI();
   }
 
-  private void showTrades() {
-    try {
-      int countPerPage = cmbItemsPerPage.getValue();
-      int startIndex = pages.getCurrentPageIndex() * countPerPage;
-      // выборка закупок в соответствии с фильтром и текущей страницей
-      List<Trade> filteredTrades = tradeService
-          .findAll(filterOptions)
-          .stream()
-          .skip(startIndex).limit(startIndex + countPerPage)
-          .collect(Collectors.toList());
-
-      UpdateTradesInfoTask updateTradesInfoTask = applicationContext.getBean(UpdateTradesInfoTask.class, tradeService,
-          filteredTrades);
-
-      updateTradesInfoTask.setOnFailed(event -> {
-        releaseUI();
-        lblStatusText.setText(ERROR_MSG);
-        UIController.showErrorMessage(updateTradesInfoTask.getException().getMessage());
-      });
-
-      updateTradesInfoTask.setOnSucceeded(event -> {
-        releaseUI();
-        printProposals(updateTradesInfoTask.getValue());
-        lblStatusText.setText(IDLE_MSG);
-        pages.setPageCount(Math.floorDiv(filteredTrades.size(), countPerPage) + 1);
-        lblTradesCount.setText(String.valueOf(filteredTrades.size()));
-      });
-
-      lblStatusText.setText(PENDING_MSG);
-      updateTradesInfoTask.start();
-    } catch (Exception ex) {
-      pages.setPageCount(1);
-      lblTradesCount.setText(String.valueOf(0));
-      lblStatusText.setText(ERROR_MSG);
-      releaseUI();
-    }
+  private void updatePagination(List<Trade> filteredTrades) {
+    lblTradesCount.setText(String.valueOf(filteredTrades.size()));
+    pages.setPageCount(Math.floorDiv(filteredTrades.size(), cmbItemsPerPage.getValue()) + 1);
   }
 
   @FXML
@@ -239,6 +220,40 @@ public class MainController extends AbstractUIController {
 
   @FXML
   private void onTradeRefresh() {
+    // Сюда можем попасть либо щелчком мыши по элементу меню, либо через F5. Мышку мы отсекаем блокировокой экрана,
+    // а shortcut за счет этого условия.
+    if (rootPane.getChildren().contains(waitIndicator)) {
+      return;
+    }
+    try {
+      lockUI();
+      List<Trade> filteredTrades = filterTrades();
+
+      UpdateTradesInfoTask updateTradesInfoTask = applicationContext.getBean(UpdateTradesInfoTask.class, tradeService,
+          filteredTrades);
+
+      updateTradesInfoTask.setOnFailed(event -> {
+        releaseUI();
+        lblStatusText.setText(ERROR_MSG);
+        UIController.showErrorMessage(updateTradesInfoTask.getException().getMessage());
+      });
+
+      updateTradesInfoTask.setOnSucceeded(event -> {
+        webEngine.reload();
+        lblStatusText.setText(IDLE_MSG);
+      });
+
+      lblStatusText.setText(PENDING_MSG);
+      updateTradesInfoTask.start();
+    } catch (Exception ex) {
+      pages.setPageCount(1);
+      lblTradesCount.setText(String.valueOf(0));
+      lblStatusText.setText(ERROR_MSG);
+      releaseUI();
+    }
+  }
+
+  private void refreshPage() {
     lockUI();
     webEngine.reload();
   }
@@ -277,8 +292,8 @@ public class MainController extends AbstractUIController {
         trade.setStartPrice(Objects.isNull(proposalData.getStartTradeVal()) ? tradeInfo.getInitialPrice()
             : proposalData.getStartTradeVal());
         tradeService.addTrade(trade);
-        doApplyFilter();
       }
+      refreshPage();
     } catch (Throwable t) {
       log.error(String.format(ERROR_COMMON_LOG_MSG, t.getClass(), t.getMessage()));
       UIController.showErrorMessage(t.getMessage());
@@ -310,7 +325,7 @@ public class MainController extends AbstractUIController {
         trade.setActivateTime(proposalData.get().getActivateTime());
         tradeService.saveTrade(trade);
       }
-      doApplyFilter();
+      refreshPage();
     } catch (Exception ex) {
       UIController.showErrorMessage(ex.getMessage());
     }
@@ -332,7 +347,7 @@ public class MainController extends AbstractUIController {
       for (String id : ids) {
         tradeService.deleteTrade(Long.parseLong(id));
       }
-      doApplyFilter();
+      refreshPage();
     } catch (Throwable t) {
       UIController.showErrorMessage(t.getMessage());
     }
@@ -357,18 +372,14 @@ public class MainController extends AbstractUIController {
     //
   }
 
-  private void doApplyFilter() {
+  @FXML
+  private void onFilterApply() {
     lockUI();
     prepareFilterOptions();
     pages.currentPageIndexProperty().removeListener(currentPageChangeListener);
     pages.setCurrentPageIndex(0);
     pages.currentPageIndexProperty().addListener(currentPageChangeListener);
     webEngine.reload();
-  }
-
-  @FXML
-  private void onFilterApply() {
-    doApplyFilter();
   }
 
   @FXML

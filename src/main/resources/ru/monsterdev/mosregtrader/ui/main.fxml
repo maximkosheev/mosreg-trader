@@ -34,7 +34,11 @@
                   </Menu>
                   <Menu mnemonicParsing="false" text="Закупки">
                      <items>
-                        <MenuItem fx:id="actTradeRefresh" mnemonicParsing="false" onAction="#onTradeRefresh" text="Обновить" />
+                        <MenuItem fx:id="actTradeRefresh" mnemonicParsing="false" onAction="#onTradeRefresh" text="Обновить">
+                           <accelerator>
+                              <KeyCodeCombination code="F5" alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" />
+                           </accelerator>
+                        </MenuItem>
                         <SeparatorMenuItem fx:id="act" mnemonicParsing="false" />
                         <MenuItem fx:id="actTradeNew" mnemonicParsing="false" onAction="#onTradeNew" text="Новая закупка...">
                            <accelerator>

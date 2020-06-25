@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,15 +34,16 @@ public class UpdateProposalsPrice implements Runnable {
     try {
       log.info("Time to update proposals price");
       // выбираем все те закупки по которым еще не подано предложение и подошло время
+      LocalDateTime now = LocalDateTime.now();
       List<Trade> trades = tradeService.findAll().stream()
           .filter(trade -> {
-            long duration = Duration.between(LocalDateTime.now(), trade.getEndDT()).toMillis();
+            long duration = Duration.between(now, trade.getEndDT()).toMillis();
             return (duration > 0 && duration <= remainedLimit) &&
                 (trade.getProposal() != null) &&
                 (trade.getStatus() == TradeStatus.SUGGESTIONS);
           })
           .collect(Collectors.toList());
-      log.info("It was found {} trades for trade: {}", trades.size(), trades);
+      log.debug("It was found {} trades for trade: {}", trades.size(), trades);
       tradeService.updateProposalsPrice(trades);
       log.info("Proposals updated successfully");
     } catch (Exception ex) {

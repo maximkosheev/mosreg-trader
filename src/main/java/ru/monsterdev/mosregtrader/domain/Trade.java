@@ -156,13 +156,9 @@ public class Trade {
   }
 
   public BigDecimal getPrice() {
-    if (getProposal() == null) {
-      return null;
-    } else {
-      return getProposal().getProducts().stream()
+      return getProducts().stream()
           .map(ProductDto::getSumm)
           .reduce(BigDecimal.ZERO, BigDecimal::add)
           .setScale(2);
-    }
   }
 }

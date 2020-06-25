@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +63,8 @@ public class TradeServiceImpl implements TradeService {
   @Autowired
   private CalcPriceAlgorithm calcPriceAlgorithm;
 
+  private CountDownLatch isBusy = new CountDownLatch(0);
+
   private final BigDecimal tradeReduction = new BigDecimal("1.00");
 
   @Override
@@ -74,11 +77,14 @@ public class TradeServiceImpl implements TradeService {
     return tradeRepository.findAll(userService.getCurrentUser()).stream()
         .filter(trade -> (tradeFilter.getTradeNum() == null || trade.getTradeId().equals(tradeFilter.getTradeNum()))
             && (tradeFilter.getTradeName() == null || trade.getName().equals(tradeFilter.getTradeName()))
-            && (tradeFilter.getBeginFrom() == null || trade.getBeginDT().toLocalDate().isAfter(tradeFilter.getBeginFrom()))
+            && (tradeFilter.getBeginFrom() == null || trade.getBeginDT().toLocalDate()
+            .isAfter(tradeFilter.getBeginFrom()))
             && (tradeFilter.getBeginTo() == null || trade.getBeginDT().toLocalDate().isBefore(tradeFilter.getBeginTo()))
-            && (tradeFilter.getFinishFrom() == null || trade.getEndDT().toLocalDate().isAfter(tradeFilter.getFinishFrom()))
+            && (tradeFilter.getFinishFrom() == null || trade.getEndDT().toLocalDate()
+            .isAfter(tradeFilter.getFinishFrom()))
             && (tradeFilter.getFinishTo() == null || trade.getEndDT().toLocalDate().isBefore(tradeFilter.getFinishTo()))
-            && (tradeFilter.getStatus() == null || tradeFilter.getStatus() == TradeStatus.ALL || trade.getFilterStatus() == tradeFilter.getStatus()))
+            && (tradeFilter.getStatus() == null || tradeFilter.getStatus() == TradeStatus.ALL
+            || trade.getFilterStatus() == tradeFilter.getStatus()))
         .collect(Collectors.toList());
   }
 
@@ -160,6 +166,7 @@ public class TradeServiceImpl implements TradeService {
   @Override
   synchronized public void updateTrades(List<Trade> trades) throws MosregTraderException {
     try {
+      isBusy.await();
       for (Trade trade : trades) {
         TradeInfoDto tradeInfo = fetchTradeInfo(trade);
         trade.setName(tradeInfo.getTradeName());
@@ -181,6 +188,8 @@ public class TradeServiceImpl implements TradeService {
           }
         }
       }
+    } catch (InterruptedException ex) {
+      log.error("Прервалось ожидание завершение операции обновления цены");
     } catch (Exception ex) {
       log.error("", ex);
       throw ex;
@@ -190,20 +199,27 @@ public class TradeServiceImpl implements TradeService {
   @Override
   public void updateProposalsPrice(List<Trade> trades) throws MosregTraderException {
     try {
+      isBusy = new CountDownLatch(trades.size());
       for (Trade trade : trades) {
         if (trade.getProposal() != null && trade.getProposal().getStatus() == ProposalStatus.ACTIVE) {
           BestProposalInfoDto bestProposalInfo = fetchBestProposalInfo(trade);
-          // Если лучшее предложение не наше, то обновляем наше предложение
           if (bestProposalInfo != null && !Objects.equals(bestProposalInfo.getBestProposalId(), trade.getProposal().getId())) {
             log.debug("По закупке {} цена лучшего предложения: {}, моего {} - снижаем цену", trade.getTradeId(),
-                bestProposalInfo.getBestPrice().toPlainString(), trade.getPrice().toPlainString());
+                bestProposalInfo.getBestPrice().toPlainString(), trade.getProposal().getPrice().toPlainString());
             try {
               updateProposalPrice(trade, bestProposalInfo);
             } catch (MosregTraderException ex) {
               log.error("Failed to update proposal price for trade {}, {}", trade.getTradeId(), ex);
             }
+          } else {
+            if (bestProposalInfo == null) {
+              log.error("Error bestProposalInfo is null");
+            } else {
+              log.debug("Мое предложениие с ценой {} лучшее - ничего не делаем", bestProposalInfo.getBestPrice().toPlainString());
+            }
           }
         }
+        isBusy.countDown();
       }
     } catch (Exception ex) {
       log.error("", ex);
@@ -255,7 +271,8 @@ public class TradeServiceImpl implements TradeService {
       Set<ProductDto> products = StringUtil.parseTradeForProducts(response.getEntity());
       if (products.isEmpty()) {
         log.error("Trade products list is empty");
-        throw new MosregTraderException(String.format("Ошибка: по закупке %d не найдено ни одной позиции", trade.getTradeId()));
+        throw new MosregTraderException(
+            String.format("Ошибка: по закупке %d не найдено ни одной позиции", trade.getTradeId()));
       }
       return products;
     } catch (Exception ex) {
@@ -279,7 +296,8 @@ public class TradeServiceImpl implements TradeService {
       return proposals.getTotalrecords() >= 1 ? proposals.getProposals().get(0) : null;
     } catch (IOException ex) {
       log.error("", ex);
-      throw new MosregTraderException(String.format("Ошибка обработки информации о предложении %d", trade.getTradeId()));
+      throw new MosregTraderException(
+          String.format("Ошибка обработки информации о предложении %d", trade.getTradeId()));
     }
   }
 
@@ -294,7 +312,8 @@ public class TradeServiceImpl implements TradeService {
       Set<ProductDto> products = StringUtil.parseProposalForProducts(response.getEntity());
       if (products.isEmpty()) {
         log.error("Proposal products list is empty");
-        throw new MosregTraderException(String.format("Ошибка: по предложению %d не найдено ни одной позиции", proposal.getId()));
+        throw new MosregTraderException(
+            String.format("Ошибка: по предложению %d не найдено ни одной позиции", proposal.getId()));
       }
       return products;
     } catch (Exception ex) {
@@ -309,7 +328,8 @@ public class TradeServiceImpl implements TradeService {
       Set<ProductDto> products = trade.getProducts();
       if (products.isEmpty()) {
         log.error("Trade products is empty");
-        throw new MosregTraderException(String.format("Ошибка: по закупке %d не надено ни одной позиции", trade.getTradeId()));
+        throw new MosregTraderException(
+            String.format("Ошибка: по закупке %d не надено ни одной позиции", trade.getTradeId()));
       }
       calcPriceAlgorithm.doCalc(products, trade.getStartPrice());
       // получаем общую стоимость закупки (в закупке может быть несколько позиций для каждой из которых задана стоимость)
@@ -332,7 +352,8 @@ public class TradeServiceImpl implements TradeService {
       TraderResponse response = httpService.sendRequest(new PublishProposalRequest(trade, requestBody));
       if (response.getCode() != HttpStatus.SC_OK) {
         log.error("Failed to create proposal products: code {}, message {}", response.getCode(), response.getEntity());
-        throw new MosregTraderException(String.format("Ошибка при подачи предложения по закупке %d", trade.getTradeId()));
+        throw new MosregTraderException(
+            String.format("Ошибка при подачи предложения по закупке %d", trade.getTradeId()));
       }
       Proposal proposal = new Proposal();
       proposal.setId(Long.parseLong(response.getEntity()));
@@ -349,12 +370,14 @@ public class TradeServiceImpl implements TradeService {
       TraderResponse response = httpService.sendRequest(new GetTradePageRequest(trade.getTradeId()));
       if (response.getCode() != HttpStatus.SC_OK) {
         log.error("Failed to get trade best proposal: code {}, message {}", response.getCode(), response.getEntity());
-        throw new MosregTraderException(String.format("Ошибка получения лучшего предложения по закупке %d", trade.getTradeId()));
+        throw new MosregTraderException(
+            String.format("Ошибка получения лучшего предложения по закупке %d", trade.getTradeId()));
       }
       List<SupplierProposal> supplierProposals = StringUtil.parseForProposals(response.getEntity());
       if (supplierProposals.isEmpty()) {
         log.error("Supplier proposal products list is empty");
-        throw new MosregTraderException(String.format("Ошибка: по закупке %d не найдено ни одного предложения", trade.getTradeId()));
+        throw new MosregTraderException(
+            String.format("Ошибка: по закупке %d не найдено ни одного предложения", trade.getTradeId()));
       }
       supplierProposals.sort(Comparator.comparing(SupplierProposal::getPrice));
       BestProposalInfoDto bestProposalInfoDto = new BestProposalInfoDto();
@@ -364,32 +387,72 @@ public class TradeServiceImpl implements TradeService {
       return bestProposalInfoDto;
     } catch (Exception ex) {
       log.error("", ex);
-      throw new MosregTraderException(String.format("Ошибка обработки информации о предложениях по закупке %d", trade.getTradeId()));
+      throw new MosregTraderException(
+          String.format("Ошибка обработки информации о предложениях по закупке %d", trade.getTradeId()));
     }
   }
 
-  private void updateProposalPrice(@NonNull Trade trade, @NonNull BestProposalInfoDto bestProposalInfo) throws MosregTraderException {
-    BigDecimal newProposalPrice = bestProposalInfo.getBestPrice().subtract(tradeReduction);
-    if (newProposalPrice.compareTo(trade.getMinTradeVal()) < 0) {
-      log.error("По закупке {} достигнута минимальная установленная цена. Пороговое значение: {}, требуется: {}",
-          trade.getTradeId(), trade.getMinTradeVal().toPlainString(), newProposalPrice.toPlainString());
-      throw new MosregTraderException("Достигнута минимальная цена");
+  private void updateProposalPrice(@NonNull Trade trade, @NonNull BestProposalInfoDto bestProposalInfo)
+      throws MosregTraderException {
+    // проверим действительно ли текущая цена лидера ниже той, что мы подавали в прошлый раз
+    // Может быть такая ситуация: на предыдущей итерации я сформировал новую цену предложения,
+    // подал ее, но площадка её не приняла (по какой-то причине), тогда на текущей интерации цена лидера может быть выше
+    // моей текущей цены, поэтому - прежде чем расчитывать новое значение цены предложения нужно убедиться,
+    // что текущая цена лидера ниже, и если это действительно так - тогда расчитываем,
+    // а если нет - нужно заново подать предложение с ценой из предыдущего цикла
+    if (bestProposalInfo.getBestPrice().compareTo(trade.getProposal().getPrice()) <= 0) {
+      // расчитываем новую цену предложения
+      BigDecimal newProposalPrice = bestProposalInfo.getBestPrice().subtract(calcReduce(trade, bestProposalInfo));
+      if (newProposalPrice.compareTo(trade.getMinTradeVal()) < 0) {
+        log.error("По закупке {} достигнута минимальная установленная цена. Пороговое значение: {}, требуется: {}",
+            trade.getTradeId(), trade.getMinTradeVal().toPlainString(), newProposalPrice.toPlainString());
+        throw new MosregTraderException("Достигнута минимальная цена");
+      }
+      // А можно ли вообще сделать предложение с такой низкой суммарной стоимостью
+      BigDecimal tradeMinPrice = trade.getProposal().getProducts().stream().map(ProductDto::getMinCost)
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+      if (newProposalPrice.compareTo(tradeMinPrice) < 0) {
+        log.error("По закупке невозможно установить цену предложения {} ибо минимальная цена по данной закупке {}",
+            trade.getTradeId(), newProposalPrice.toPlainString(), tradeMinPrice.toPlainString());
+        throw new MosregTraderException("Невозможно установить требуемую цену");
+      }
+      log.debug("Снижаем цену предложения по закупке {} до {}", trade.getTradeId(), newProposalPrice.toPlainString());
+      calcPriceAlgorithm.doCalc(trade.getProposal().getProducts(), newProposalPrice);
     }
-    // А можно ли вообще сделать предложение с такой низкой суммарной стоимостью
-    BigDecimal tradeMinPrice = trade.getProposal().getProducts().stream().map(ProductDto::getMinCost)
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
-    if (newProposalPrice.compareTo(tradeMinPrice) < 0) {
-      log.error("По закупке невозможно установить цену предложения {} ибо минимальная цена по данной закупке {}",
-          trade.getTradeId(), newProposalPrice.toPlainString(), tradeMinPrice.toPlainString());
-      throw new MosregTraderException("Невозможно установить требуемую цену");
-    }
-    log.debug("Снижаем цену предложения по закупке {} до {}", trade.getTradeId(), newProposalPrice.toPlainString());
-    calcPriceAlgorithm.doCalc(trade.getProposal().getProducts(), newProposalPrice);
+    log.debug("Итоговая цена предложения: {}", trade.getProposal().getPrice().toPlainString());
     // отправка запроса на изменение торгового предложения
     TraderResponse response = httpService.sendRequest(new UpdateProposalPriceRequest(trade));
     if (response.getCode() != HttpStatus.SC_OK) {
       log.error("Failed to update proposal price: code {}, message {}", response.getCode(), response.getEntity());
       throw new MosregTraderException("Ошибка обновления цены предложения на площадке");
     }
+  }
+
+  /**
+   * Вычисляет на сколько нужно снизить текущую цену лидера в зависимости от условия
+   * @param trade закупка
+   * @param bestProposalInfo предложение лидера
+   * @return на сколько нужно снизить
+   */
+  private BigDecimal calcReduce(Trade trade, BestProposalInfoDto bestProposalInfo) {
+    // определяем насколько процентов текущая цена лидера ниже начальной цены закупки
+    double reducePercent = 100.0 * (1.0 - bestProposalInfo.getBestPrice().divide(trade.getPrice(), RoundingMode.HALF_UP)
+        .doubleValue());
+    double percentToReduce = 0;
+    if (reducePercent >= 0 && reducePercent < 10) {
+      percentToReduce = 4;
+    } else if (reducePercent >= 10 && reducePercent < 20) {
+      percentToReduce = 8;
+    } else if (reducePercent >= 20 && reducePercent < 30) {
+      percentToReduce = 12;
+    } else if (reducePercent >= 30 && reducePercent < 40) {
+      percentToReduce = 16;
+    } else if (reducePercent >= 40 && reducePercent < 50) {
+      percentToReduce = 12;
+    } else if (reducePercent >= 50) {
+      percentToReduce = 20;
+    }
+    log.debug("По закупке {} цена снизилась на {}%, снижаем на {}%", trade.getTradeId(), reducePercent, percentToReduce);
+    return bestProposalInfo.getBestPrice().multiply(new BigDecimal(percentToReduce / 100.0));
   }
 }
