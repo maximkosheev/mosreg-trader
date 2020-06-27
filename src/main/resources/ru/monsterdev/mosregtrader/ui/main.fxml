@@ -40,21 +40,11 @@
                            </accelerator>
                         </MenuItem>
                         <SeparatorMenuItem fx:id="act" mnemonicParsing="false" />
-                        <MenuItem fx:id="actTradeNew" mnemonicParsing="false" onAction="#onTradeNew" text="Новая закупка...">
-                           <accelerator>
-                              <KeyCodeCombination alt="UP" code="N" control="DOWN" meta="UP" shift="DOWN" shortcut="UP" />
-                           </accelerator>
-                        </MenuItem>
-                        <MenuItem fx:id="actTradeEdit" mnemonicParsing="false" onAction="#onTradeEdit" text="Редактировать...">
-                           <accelerator>
-                              <KeyCodeCombination alt="UP" code="E" control="DOWN" meta="UP" shift="DOWN" shortcut="UP" />
-                           </accelerator>
-                        </MenuItem>
-                        <MenuItem fx:id="actTradeDelete" mnemonicParsing="false" onAction="#onTradeDelete" text="Удалить выбранные">
-                           <accelerator>
-                              <KeyCodeCombination alt="UP" code="DELETE" control="DOWN" meta="UP" shift="DOWN" shortcut="UP" />
-                           </accelerator>
-                        </MenuItem>
+                        <MenuItem fx:id="actTradeNew" mnemonicParsing="false" onAction="#onTradeNew" text="Новая закупка..." />
+                        <MenuItem fx:id="actTradeEdit" mnemonicParsing="false" onAction="#onTradeEdit" text="Редактировать..." />
+                        <MenuItem fx:id="actTradeRevoke" mnemonicParsing="false" onAction="#onTradeRevoke" text="Отозвать..." />
+                        <SeparatorMenuItem mnemonicParsing="false" />
+                        <MenuItem fx:id="actTradeDelete" mnemonicParsing="false" onAction="#onTradeDelete" text="Удалить выбранные" />
                      </items>
                   </Menu>
                   <Menu mnemonicParsing="false" text="Профиль">

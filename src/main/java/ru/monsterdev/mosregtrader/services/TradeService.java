@@ -79,4 +79,10 @@ public interface TradeService {
    * @return true/false
    */
   boolean isContainAnyOf(List<Long> tradeIds);
+
+  /**
+   * Отзывает предложение по закупком
+   * @param trades закупки
+   */
+  void revokeTrades(List<Trade> trades)  throws MosregTraderException;
 }

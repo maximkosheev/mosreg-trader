@@ -30,6 +30,7 @@ import ru.monsterdev.mosregtrader.http.requests.GetTradeInfoRequest;
 import ru.monsterdev.mosregtrader.http.requests.GetTradePageRequest;
 import ru.monsterdev.mosregtrader.http.requests.GetUpdateProposalPageRequest;
 import ru.monsterdev.mosregtrader.http.requests.PublishProposalRequest;
+import ru.monsterdev.mosregtrader.http.requests.RevokeProposalRequest;
 import ru.monsterdev.mosregtrader.http.requests.UpdateProposalPriceRequest;
 import ru.monsterdev.mosregtrader.model.SupplierProposal;
 import ru.monsterdev.mosregtrader.model.TradeFilter;
@@ -121,14 +122,14 @@ public class TradeServiceImpl implements TradeService {
       trade.setNmc(tradeInfo.getInitialPrice());
       trade.setProducts(fetchTradeItems(trade));
       ProposalInfoDto proposalInfo = fetchTradeProposalInfo(trade);
-      // TODO!!!
-      if (proposalInfo != null && ProposalStatus.valueOf(proposalInfo.getStatus()) != ProposalStatus.REVOKED) {
+      if (proposalInfo != null) {
         Proposal proposal = new Proposal();
         proposal.setId(proposalInfo.getProposalId());
         proposal.setStatus(ProposalStatus.valueOf(proposalInfo.getStatus()));
-        proposal.setProducts(fetchProposalItems(proposal));
         trade.setProposal(proposal);
+        // Если предложение активно, то получаем информацию о позициях в предложении и лучшее предложение по закупке
         if (trade.getProposal().getStatus() == ProposalStatus.ACTIVE) {
+          proposal.setProducts(fetchProposalItems(proposal));
           BestProposalInfoDto bestProposalInfo = fetchBestProposalInfo(trade);
           if (bestProposalInfo != null) {
             trade.setProposalsCount(bestProposalInfo.getTotalCount());
@@ -151,10 +152,13 @@ public class TradeServiceImpl implements TradeService {
   public void submitProposals(List<Trade> trades) throws MosregTraderException {
     try {
       for (Trade trade : trades) {
-        Proposal proposal = submitProposal(trade);
-        if (proposal != null) {
-          proposal.setProducts(fetchProposalItems(proposal));
-          trade.setProposal(proposal);
+        // если предложение не было ранее подано
+        if (trade.getProposal() == null) {
+          Proposal proposal = submitProposal(trade);
+          if (proposal != null) {
+            proposal.setProducts(fetchProposalItems(proposal));
+            trade.setProposal(proposal);
+          }
         }
       }
     } catch (Exception ex) {
@@ -220,6 +224,21 @@ public class TradeServiceImpl implements TradeService {
           }
         }
         isBusy.countDown();
+      }
+    } catch (Exception ex) {
+      log.error("", ex);
+      throw ex;
+    }
+  }
+
+  @Override
+  public void revokeTrades(List<Trade> trades) throws MosregTraderException {
+    try {
+      for (Trade trade : trades) {
+        if (trade.getProposal() != null && trade.getProposal().getStatus() == ProposalStatus.ACTIVE) {
+          revokeTrade(trade.getProposal());
+          trade.getProposal().setStatus(ProposalStatus.REVOKED);
+        }
       }
     } catch (Exception ex) {
       log.error("", ex);
@@ -454,5 +473,14 @@ public class TradeServiceImpl implements TradeService {
     }
     log.debug("По закупке {} цена снизилась на {}%, снижаем на {}%", trade.getTradeId(), reducePercent, percentToReduce);
     return bestProposalInfo.getBestPrice().multiply(new BigDecimal(percentToReduce / 100.0));
+  }
+
+  private void revokeTrade(@NonNull Proposal proposal) throws MosregTraderException{
+    log.info("Отзыв предложения {}", proposal.getId());
+    TraderResponse response = httpService.sendRequest(new RevokeProposalRequest(proposal));
+    if (response.getCode() != HttpStatus.SC_OK) {
+      log.error("Failed to revoke proposal, code {}, message {}", response.getCode(), response.getEntity());
+      throw new MosregTraderException(String.format("Ошибка отзыва предложения %d", proposal.getId()));
+    }
   }
 }

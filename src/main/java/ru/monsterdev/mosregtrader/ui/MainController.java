@@ -5,13 +5,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import javafx.beans.value.ChangeListener;
 import javafx.concurrent.Worker;
@@ -300,26 +301,31 @@ public class MainController extends AbstractUIController {
     }
   }
 
+  private List<Trade> getSelectedTrades() {
+    JSObject mainView = (JSObject) webEngine.executeScript("mainView");
+    String result = mainView.call("getSelected").toString();
+    String[] ids = StringUtils.isEmpty(result) ? new String[]{} : result.split(",");
+    if (ids.length < 1) {
+      return Collections.emptyList();
+    }
+    return Arrays.stream(ids)
+        .map(id -> tradeService.getTradeById(Long.parseLong(id)))
+        .collect(Collectors.toList());
+  }
+
   @FXML
   private void onTradeEdit() {
     try {
-      JSObject mainView = (JSObject) webEngine.executeScript("mainView");
-      String result = mainView.call("getSelected").toString();
-      if (result.isEmpty()) {
+      List<Trade> selectedTrades = getSelectedTrades();
+      if (selectedTrades.isEmpty()) {
         throw new MosregTraderException("Выберете закупки, которые нужно редактировать, а затем повторите операцию");
-      }
-
-      String[] ids = result.split(",");
-      if (ids.length < 1) {
-        throw new MosregTraderException("Не выбрано ни одной закупки для удаления");
       }
 
       Optional<ProposalData> proposalData = uiDispatcher.showProposalDataUI();
       if (!proposalData.isPresent()) {
         return;
       }
-      for (String id : ids) {
-        Trade trade = tradeService.getTradeById(Long.parseLong(id));
+      for (Trade trade : selectedTrades) {
         trade.setMinTradeVal(proposalData.get().getMinTradeVal());
         trade.setStartPrice(proposalData.get().getStartTradeVal());
         trade.setActivateTime(proposalData.get().getActivateTime());
@@ -332,20 +338,36 @@ public class MainController extends AbstractUIController {
   }
 
   @FXML
+  private void onTradeRevoke() {
+    try {
+      List<Trade> selectedTrades = getSelectedTrades();
+      if (selectedTrades.isEmpty()) {
+        throw new MosregTraderException("Выберете закупки, по которым нужно отозвать предложение, а затем повторите операцию");
+      }
+
+      if (!UIController.showConfirmMessage("Вы действительно хотите отозвать предложения по закупкам?")) {
+        return;
+      }
+      tradeService.revokeTrades(selectedTrades);
+      refreshPage();
+    } catch (Exception ex) {
+      UIController.showErrorMessage(ex.getMessage());
+    }
+  }
+
+  @FXML
   private void onTradeDelete() {
     try {
-      JSObject mainView = (JSObject) webEngine.executeScript("mainView");
-      String result = mainView.call("getSelected").toString();
-      if (result.isEmpty()) {
+      List<Trade> selectedTrades = getSelectedTrades();
+      if (selectedTrades.isEmpty()) {
         throw new MosregTraderException("Выберете закупки, которые нужно удалить, а затем повторите операцию");
       }
 
       if (!UIController.showConfirmMessage("Вы действительно хотите удалить выбранные закупки?")) {
         return;
       }
-      String[] ids = result.split(",");
-      for (String id : ids) {
-        tradeService.deleteTrade(Long.parseLong(id));
+      for (Trade trade : selectedTrades) {
+        tradeService.deleteTrade(trade.getTradeId());
       }
       refreshPage();
     } catch (Throwable t) {
