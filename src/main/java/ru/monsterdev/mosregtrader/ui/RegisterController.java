@@ -7,7 +7,6 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
 import ru.monsterdev.mosregtrader.domain.User;
 import ru.monsterdev.mosregtrader.model.CertificateInfo;
 import ru.monsterdev.mosregtrader.services.UserService;
@@ -94,7 +93,7 @@ public class RegisterController extends AbstractUIController {
 
   @FXML
   private void onRegister(ActionEvent event) {
-    if (!LicenseUtil.check(userService.getCount() + 1L)) {
+    if (!LicenseUtil.checkAccountsLimit(userService.getCount() + 1L)) {
       UIController.showErrorMessage("Вы превысили ограничение по количеству пользователей,\n" +
           "зарегистрированных в системе, установленное вашей лицензией.\n" +
           "Обратитесь к диллеру для получения соответсвующей лицензии");

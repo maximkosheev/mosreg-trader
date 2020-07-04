@@ -52,6 +52,7 @@ import ru.monsterdev.mosregtrader.services.scheduled.UpdateTradesInfoService;
 import ru.monsterdev.mosregtrader.tasks.UpdateTradesInfoTask;
 import ru.monsterdev.mosregtrader.ui.control.WaitIndicator;
 import ru.monsterdev.mosregtrader.ui.model.ProposalViewItem;
+import ru.monsterdev.mosregtrader.utils.LicenseUtil;
 
 @Slf4j
 public class MainController extends AbstractUIController {
@@ -224,6 +225,10 @@ public class MainController extends AbstractUIController {
     // Сюда можем попасть либо щелчком мыши по элементу меню, либо через F5. Мышку мы отсекаем блокировокой экрана,
     // а shortcut за счет этого условия.
     if (rootPane.getChildren().contains(waitIndicator)) {
+      return;
+    }
+    if (!LicenseUtil.checkDateLimit(LocalDate.now())) {
+      UIController.showErrorMessage("Закончился срок действия лицензии, обратитесь к дилеру за продлением");
       return;
     }
     try {

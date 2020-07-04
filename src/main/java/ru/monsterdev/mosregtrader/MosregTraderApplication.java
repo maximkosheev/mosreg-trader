@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 import javafx.scene.Scene;
@@ -69,22 +70,28 @@ public class MosregTraderApplication extends AbstractApplication {
         .longOpt("license")
         .build());
     options.addOption(Option.builder()
-        .longOpt("limit")
+        .longOpt("accountsLimit")
         .hasArg()
         .argName("COUNT")
+        .build());
+    options.addOption(Option.builder()
+        .longOpt("untilLimit")
+        .hasArg()
+        .argName("UNTIL")
         .build());
     CommandLineParser parser = new DefaultParser();
     try {
       CommandLine line = parser.parse(options, args);
       // нужно сгенерировать лицензионный ключ (максимальное кол-во зарегистрированных аккаунтов указывается в параметре limit)
       if (line.hasOption("license")) {
-        Integer limit = Integer.parseInt(line.getOptionValue("limit", "1"));
+        Integer limit = Integer.parseInt(line.getOptionValue("accountsLimit", "1"));
+        String limitDate = line.getOptionValue("untilLimit", "1970-01-01");
         // формируем информацию о лицензии, с указанием кол-ва аккаунтов
-        byte[] licenseInfo = String.format("usercount=%d", limit).getBytes(Charset.forName("UTF-8"));
+        byte[] licenseInfo = String.format("usercount=%d;until=%s", limit, limitDate).getBytes(Charset.forName("UTF-8"));
         Checksum checksum = new CRC32();
         checksum.update(licenseInfo, 0, licenseInfo.length);
         // добавляем к информации о лицензии контрольную сумму
-        String licenseData = String.format("usercount=%d;crc=%d", limit, checksum.getValue());
+        String licenseData = String.format("usercount=%d;until=%s;crc=%d", limit, limitDate, checksum.getValue());
         // формируем файл лицензии при этом зашифровываем информацию о лицензии
         FileOutputStream fos = new FileOutputStream("license.key");
         fos.write(CipherUtil.encrypt(licenseData.getBytes(Charset.forName("UTF-8"))));
