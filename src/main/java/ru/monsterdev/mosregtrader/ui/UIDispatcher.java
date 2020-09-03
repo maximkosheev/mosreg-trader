@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import ru.monsterdev.mosregtrader.model.CertificateInfo;
 import ru.monsterdev.mosregtrader.model.ProposalData;
 import ru.monsterdev.mosregtrader.model.dto.TradeInfoDto;
+import ru.monsterdev.mosregtrader.ui.ProfileController.ShowMode;
 
 @Slf4j
 @Component
@@ -25,7 +26,7 @@ public class UIDispatcher {
   private UIComponent loginView;
 
   @Autowired
-  private UIComponent registerView;
+  private UIComponent profileView;
 
   @Autowired
   private UIComponent certificateListView;
@@ -39,20 +40,16 @@ public class UIDispatcher {
   @Autowired
   private UIComponent proposalDataView;
 
-  @Autowired
-  private UIComponent editProfileView;
-
   private Map<String, Scene> scenes = new HashMap<>();
 
   @PostConstruct
   public void init() {
     scenes.put("login", new Scene(loginView.getView(), 600, 400));
-    scenes.put("register", new Scene(registerView.getView(), 600, 480));
+    scenes.put("profile", new Scene(profileView.getView(), 600, 700));
     scenes.put("certificates", new Scene(certificateListView.getView(), 450, 355));
     scenes.put("main", new Scene(mainView.getView(), 1024, 768));
     scenes.put("tradeFilter", new Scene(tradeFilterView.getView(), 860, 770));
-    scenes.put("proposalData", new Scene(proposalDataView.getView(), 400, 245));
-    scenes.put("editProfile", new Scene(editProfileView.getView(), 600, 480));
+    scenes.put("proposalData", new Scene(proposalDataView.getView(), 400, 420));
   }
 
   public Stage getPrimaryStage() {
@@ -74,11 +71,18 @@ public class UIDispatcher {
     primaryStage.show();
   }
 
-  public void showRegisterUI() {
-    primaryStage.setScene(scenes.get("register"));
-    primaryStage.setTitle("MosregTrader - Регистрация пользователя");
-    loginView.getController().bootstrap();
-    primaryStage.show();
+  public void showProfileUI(ShowMode showMode) {
+    Stage stage = showMode == ShowMode.REGISTER ? primaryStage : new Stage();
+    stage.setTitle(showMode == ShowMode.REGISTER ?
+        "MosregTrader - Регистрация пользователя" :
+        "MosregTrader - Редактирование пользователя");
+    stage.setScene(scenes.get("profile"));
+    profileView.getController().bootstrap(showMode);
+    if (showMode == ShowMode.REGISTER) {
+      stage.show();
+    } else if (showMode == ShowMode.EDIT) {
+      stage.showAndWait();
+    }
   }
 
   public Optional<CertificateInfo> showCertificateListUI() {
@@ -115,13 +119,5 @@ public class UIDispatcher {
     proposalDataView.getController().bootstrap();
     stage.showAndWait();
     return Optional.ofNullable(((ProposalController)proposalDataView.getController()).getProposalData());
-  }
-
-  public void showEditProfileUI() {
-    Stage stage = new Stage();
-    stage.setScene(scenes.get("editProfile"));
-    stage.setTitle("MosregTrader - Редактирование профиля");
-    editProfileView.getController().bootstrap();
-    stage.showAndWait();
   }
 }

@@ -22,4 +22,19 @@ public class ContactInfo {
 
   @JsonProperty("ContactInfoEmail")
   private String email;
+
+  @JsonProperty("ContactInfoBankBik")
+  private String bik;
+
+  @JsonProperty("ContactInfoBankCheckingAccount")
+  private String checkingAccount;
+
+  @JsonProperty("ContactInfoBankCorrespondentAccount")
+  private String correspondentAccount;
+
+  @JsonProperty("ContactInfoBankName")
+  private String bankName;
+
+  @JsonProperty("ContactInfoBankPersonalAccount")
+  private String personalAccount;
 }

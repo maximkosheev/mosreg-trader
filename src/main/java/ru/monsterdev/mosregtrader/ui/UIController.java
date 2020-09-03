@@ -16,17 +16,26 @@ public interface UIController {
    */
   void bootstrap();
 
+  void bootstrap(Object params);
+
   static void showErrorMessage(String msg) {
     Alert errorDlg = new Alert(Alert.AlertType.ERROR);
-    errorDlg.setTitle("AutoMosreg");
+    errorDlg.setTitle("MosregTrader");
     errorDlg.setHeaderText("Ошибка:");
     errorDlg.setContentText(msg);
     errorDlg.showAndWait();
   }
+  
+  static Optional<ButtonType> showErrorMessageWithChoose(String msg, ButtonType ...buttons) {
+    Alert errorDlg = new Alert(Alert.AlertType.ERROR, msg, buttons);
+    errorDlg.setTitle("MosregTrader");
+    errorDlg.setHeaderText("Ошибка:");
+    return errorDlg.showAndWait();
+  }
 
   static void showInfoMessage(String msg) {
     Alert errorDlg = new Alert(Alert.AlertType.INFORMATION);
-    errorDlg.setTitle("AutoMosreg");
+    errorDlg.setTitle("MosregTrader");
     errorDlg.setHeaderText("Информация:");
     errorDlg.setContentText(msg);
     errorDlg.showAndWait();
@@ -34,7 +43,7 @@ public interface UIController {
 
   static boolean showConfirmMessage(String msg) {
     Alert confirmDlg = new Alert(Alert.AlertType.CONFIRMATION, msg, ButtonType.YES, ButtonType.NO);
-    confirmDlg.setTitle("AutoMosreg");
+    confirmDlg.setTitle("MosregTrader");
     confirmDlg.setHeaderText("Подтверждение:");
     Optional<ButtonType> confirm = confirmDlg.showAndWait();
     return confirm.filter(buttonType -> buttonType == ButtonType.YES).isPresent();

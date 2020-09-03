@@ -9,14 +9,19 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
+import javax.annotation.PostConstruct;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import ru.monsterdev.mosregtrader.algorithms.CalcPriceAlgorithm;
+import ru.monsterdev.mosregtrader.algorithms.CalcRequiredPriceDispatcher;
 import ru.monsterdev.mosregtrader.domain.Proposal;
 import ru.monsterdev.mosregtrader.domain.Trade;
 import ru.monsterdev.mosregtrader.enums.ProposalStatus;
@@ -56,17 +61,23 @@ public class TradeServiceImpl implements TradeService {
   private UserService userService;
 
   @Autowired
-  private HttpService httpService;
+  private TradeRepository tradeRepository;
 
   @Autowired
-  private TradeRepository tradeRepository;
+  private ApplicationContext appContext;
 
   @Autowired
   private CalcPriceAlgorithm calcPriceAlgorithm;
 
-  private CountDownLatch isBusy = new CountDownLatch(0);
+  @Autowired
+  private CalcRequiredPriceDispatcher calcRequiredPriceDispatcher;
 
-  private final BigDecimal tradeReduction = new BigDecimal("1.00");
+  private ExecutorService updatePriceProcessingService;
+
+  @PostConstruct
+  public void init() {
+    updatePriceProcessingService = Executors.newFixedThreadPool(5);
+  }
 
   @Override
   public List<Trade> findAll() {
@@ -154,10 +165,14 @@ public class TradeServiceImpl implements TradeService {
       for (Trade trade : trades) {
         // если предложение не было ранее подано
         if (trade.getProposal() == null) {
-          Proposal proposal = submitProposal(trade);
-          if (proposal != null) {
-            proposal.setProducts(fetchProposalItems(proposal));
-            trade.setProposal(proposal);
+          try {
+            Proposal proposal = submitProposal(trade);
+            if (proposal != null) {
+              proposal.setProducts(fetchProposalItems(proposal));
+              trade.setProposal(proposal);
+            }
+          } catch (MosregTraderException ex) {
+            log.error("", ex);
           }
         }
       }
@@ -170,7 +185,7 @@ public class TradeServiceImpl implements TradeService {
   @Override
   synchronized public void updateTrades(List<Trade> trades) throws MosregTraderException {
     try {
-      isBusy.await();
+      log.debug("Один из потоков обновления попал сюда");
       for (Trade trade : trades) {
         TradeInfoDto tradeInfo = fetchTradeInfo(trade);
         trade.setName(tradeInfo.getTradeName());
@@ -192,8 +207,6 @@ public class TradeServiceImpl implements TradeService {
           }
         }
       }
-    } catch (InterruptedException ex) {
-      log.error("Прервалось ожидание завершение операции обновления цены");
     } catch (Exception ex) {
       log.error("", ex);
       throw ex;
@@ -202,14 +215,17 @@ public class TradeServiceImpl implements TradeService {
 
   @Override
   public void updateProposalsPrice(List<Trade> trades) throws MosregTraderException {
-    try {
-      isBusy = new CountDownLatch(trades.size());
-      for (Trade trade : trades) {
-        if (trade.getProposal() != null && trade.getProposal().getStatus() == ProposalStatus.ACTIVE) {
+    CountDownLatch processCounter = new CountDownLatch(trades.size());
+    for (Trade trade : trades) {
+      updatePriceProcessingService.execute(() -> {
+        try {
           BestProposalInfoDto bestProposalInfo = fetchBestProposalInfo(trade);
-          if (bestProposalInfo != null && !Objects.equals(bestProposalInfo.getBestProposalId(), trade.getProposal().getId())) {
-            log.debug("По закупке {} цена лучшего предложения: {}, моего {} - снижаем цену", trade.getTradeId(),
-                bestProposalInfo.getBestPrice().toPlainString(), trade.getProposal().getPrice().toPlainString());
+          if (Objects.nonNull(bestProposalInfo) &&
+              !Objects.equals(bestProposalInfo.getBestProposalId(), trade.getProposal().getId())) {
+            log.debug("По закупке {} цена лучшего предложения: {}, моего {} - снижаем цену",
+                trade.getTradeId(),
+                bestProposalInfo.getBestPrice().toPlainString(),
+                trade.getProposal().getPrice().toPlainString());
             try {
               updateProposalPrice(trade, bestProposalInfo);
             } catch (MosregTraderException ex) {
@@ -219,15 +235,22 @@ public class TradeServiceImpl implements TradeService {
             if (bestProposalInfo == null) {
               log.error("Error bestProposalInfo is null");
             } else {
-              log.debug("Мое предложениие с ценой {} лучшее - ничего не делаем", bestProposalInfo.getBestPrice().toPlainString());
+              log.debug("Мое предложениие с ценой {} лучшее - ничего не делаем",
+                  bestProposalInfo.getBestPrice().toPlainString());
             }
           }
+        } catch (Exception ex) {
+          log.error("", ex);
+        } finally {
+          processCounter.countDown();
         }
-        isBusy.countDown();
-      }
-    } catch (Exception ex) {
+      });
+    }
+    // ожидание завершение всех заданий на обновление цены предложения заданных закупок.
+    try {
+      processCounter.await();
+    } catch (InterruptedException ex) {
       log.error("", ex);
-      throw ex;
     }
   }
 
@@ -260,6 +283,7 @@ public class TradeServiceImpl implements TradeService {
 
   private TradeInfoDto fetchTradeInfo(@NonNull Trade trade) throws MosregTraderException {
     try {
+      HttpService httpService = appContext.getBean(HttpService.class);
       log.info("Получение информации о закупке {}", trade.getTradeId());
       TraderResponse response = httpService.sendRequest(new GetTradeInfoRequest(trade.getTradeId()));
       if (response.getCode() != HttpStatus.SC_OK) {
@@ -281,6 +305,7 @@ public class TradeServiceImpl implements TradeService {
 
   private Set<ProductDto> fetchTradeItems(@NonNull Trade trade) throws MosregTraderException {
     try {
+      HttpService httpService = appContext.getBean(HttpService.class);
       log.info("Получение информаци по позициям закупки {}", trade.getTradeId());
       TraderResponse response = httpService.sendRequest(new GetCreateProposalPageRequest(trade.getTradeId()));
       if (response.getCode() != HttpStatus.SC_OK) {
@@ -302,6 +327,7 @@ public class TradeServiceImpl implements TradeService {
 
   private ProposalInfoDto fetchTradeProposalInfo(@NonNull Trade trade) throws MosregTraderException {
     try {
+      HttpService httpService = appContext.getBean(HttpService.class);
       log.info("Получение информации о поданном предложении на закупку {}", trade.getTradeId());
       TraderResponse response = httpService.sendRequest(new GetProposalInfoRequest(trade.getTradeId()));
       if (response.getCode() != HttpStatus.SC_OK) {
@@ -322,6 +348,7 @@ public class TradeServiceImpl implements TradeService {
 
   private Set<ProductDto> fetchProposalItems(@NonNull Proposal proposal) throws MosregTraderException {
     try {
+      HttpService httpService = appContext.getBean(HttpService.class);
       log.info("Получение информаци по позициям предложения {}", proposal.getId());
       TraderResponse response = httpService.sendRequest(new GetUpdateProposalPageRequest(proposal.getId()));
       if (response.getCode() != HttpStatus.SC_OK) {
@@ -343,6 +370,7 @@ public class TradeServiceImpl implements TradeService {
 
   private Proposal submitProposal(@NonNull Trade trade) throws MosregTraderException {
     try {
+      HttpService httpService = appContext.getBean(HttpService.class);
       log.info("Подача предложения по закупке {}", trade.getTradeId());
       Set<ProductDto> products = trade.getProducts();
       if (products.isEmpty()) {
@@ -385,6 +413,7 @@ public class TradeServiceImpl implements TradeService {
 
   private BestProposalInfoDto fetchBestProposalInfo(@NonNull Trade trade) throws MosregTraderException {
     try {
+      HttpService httpService = appContext.getBean(HttpService.class);
       log.info("Получение информаци о предложениях по закупке {}", trade.getTradeId());
       TraderResponse response = httpService.sendRequest(new GetTradePageRequest(trade.getTradeId()));
       if (response.getCode() != HttpStatus.SC_OK) {
@@ -411,7 +440,7 @@ public class TradeServiceImpl implements TradeService {
     }
   }
 
-  private void updateProposalPrice(@NonNull Trade trade, @NonNull BestProposalInfoDto bestProposalInfo)
+  public void updateProposalPrice(@NonNull Trade trade, @NonNull BestProposalInfoDto bestProposalInfo)
       throws MosregTraderException {
     // проверим действительно ли текущая цена лидера ниже той, что мы подавали в прошлый раз
     // Может быть такая ситуация: на предыдущей итерации я сформировал новую цену предложения,
@@ -419,9 +448,11 @@ public class TradeServiceImpl implements TradeService {
     // моей текущей цены, поэтому - прежде чем расчитывать новое значение цены предложения нужно убедиться,
     // что текущая цена лидера ниже, и если это действительно так - тогда расчитываем,
     // а если нет - нужно заново подать предложение с ценой из предыдущего цикла
+    HttpService httpService = appContext.getBean(HttpService.class);
+    log.info("Обновление цены предложения по закупке {}", trade.getTradeId());
     if (bestProposalInfo.getBestPrice().compareTo(trade.getProposal().getPrice()) <= 0) {
       // расчитываем новую цену предложения
-      BigDecimal newProposalPrice = bestProposalInfo.getBestPrice().subtract(calcReduce(trade, bestProposalInfo));
+      BigDecimal newProposalPrice = calcRequiredPriceDispatcher.apply(trade, bestProposalInfo.getBestPrice());
       if (newProposalPrice.compareTo(trade.getMinTradeVal()) < 0) {
         log.error("По закупке {} достигнута минимальная установленная цена. Пороговое значение: {}, требуется: {}",
             trade.getTradeId(), trade.getMinTradeVal().toPlainString(), newProposalPrice.toPlainString());
@@ -447,35 +478,8 @@ public class TradeServiceImpl implements TradeService {
     }
   }
 
-  /**
-   * Вычисляет на сколько нужно снизить текущую цену лидера в зависимости от условия
-   * @param trade закупка
-   * @param bestProposalInfo предложение лидера
-   * @return на сколько нужно снизить
-   */
-  private BigDecimal calcReduce(Trade trade, BestProposalInfoDto bestProposalInfo) {
-    // определяем насколько процентов текущая цена лидера ниже начальной цены закупки
-    double reducePercent = 100.0 * (1.0 - bestProposalInfo.getBestPrice().divide(trade.getPrice(), RoundingMode.HALF_UP)
-        .doubleValue());
-    double percentToReduce = 0;
-    if (reducePercent >= 0 && reducePercent < 10) {
-      percentToReduce = 4;
-    } else if (reducePercent >= 10 && reducePercent < 20) {
-      percentToReduce = 8;
-    } else if (reducePercent >= 20 && reducePercent < 30) {
-      percentToReduce = 12;
-    } else if (reducePercent >= 30 && reducePercent < 40) {
-      percentToReduce = 16;
-    } else if (reducePercent >= 40 && reducePercent < 50) {
-      percentToReduce = 12;
-    } else if (reducePercent >= 50) {
-      percentToReduce = 20;
-    }
-    log.debug("По закупке {} цена снизилась на {}%, снижаем на {}%", trade.getTradeId(), reducePercent, percentToReduce);
-    return bestProposalInfo.getBestPrice().multiply(new BigDecimal(percentToReduce / 100.0));
-  }
-
-  private void revokeTrade(@NonNull Proposal proposal) throws MosregTraderException{
+  private void revokeTrade(@NonNull Proposal proposal) throws MosregTraderException {
+    HttpService httpService = appContext.getBean(HttpService.class);
     log.info("Отзыв предложения {}", proposal.getId());
     TraderResponse response = httpService.sendRequest(new RevokeProposalRequest(proposal));
     if (response.getCode() != HttpStatus.SC_OK) {

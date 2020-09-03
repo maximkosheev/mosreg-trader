@@ -29,10 +29,10 @@ public class UpdateTradesInfoTask extends Task<List<Trade>> implements TraderTas
 
   @Override
   protected List<Trade> call() throws Exception {
-    log.info("Updating trades info...");
-    log.info("Found {} trades: {}", trades.size(), trades);
+    log.info("Обновление информации по закупкам из UI...");
+    log.info("Будет обновлена информация по {} закупкам: {}", trades.size(), trades);
     tradeService.updateTrades(trades);
-    log.info("All trades updated successfully");
+    log.info("Информация по всем закупкам обновлена успешно");
     return trades;
 
   }

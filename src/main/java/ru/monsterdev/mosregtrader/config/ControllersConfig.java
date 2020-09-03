@@ -6,11 +6,12 @@ import javafx.fxml.FXMLLoader;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import ru.monsterdev.mosregtrader.ui.CertificateListController;
 import ru.monsterdev.mosregtrader.ui.EditProfileController;
 import ru.monsterdev.mosregtrader.ui.LoginController;
 import ru.monsterdev.mosregtrader.ui.ProposalController;
-import ru.monsterdev.mosregtrader.ui.RegisterController;
+import ru.monsterdev.mosregtrader.ui.ProfileController;
 import ru.monsterdev.mosregtrader.ui.TradeFilterController;
 import ru.monsterdev.mosregtrader.ui.UIComponent;
 import ru.monsterdev.mosregtrader.ui.MainController;
@@ -40,9 +41,9 @@ public class ControllersConfig {
     return loadComponent("/ru/monsterdev/mosregtrader/ui/login.fxml");
   }
 
-  @Bean(name = "registerView")
+  @Bean(name = "profileView")
   public UIComponent getRegisterView() {
-    return loadComponent("/ru/monsterdev/mosregtrader/ui/register.fxml");
+    return loadComponent("/ru/monsterdev/mosregtrader/ui/profile.fxml");
   }
 
   @Bean(name = "certificateListView")
@@ -60,11 +61,6 @@ public class ControllersConfig {
     return loadComponent("/ru/monsterdev/mosregtrader/ui/trades_filter.fxml");
   }
 
-  @Bean(name = "editProfileView")
-  public UIComponent getEditProfileView() {
-    return loadComponent("/ru/monsterdev/mosregtrader/ui/edit_profile.fxml");
-  }
-
   @Bean
   public MainController getMainController() {
     return (MainController)getMainView().getController();
@@ -76,8 +72,8 @@ public class ControllersConfig {
   }
 
   @Bean
-  public RegisterController getRegisterController() {
-    return (RegisterController)getRegisterView().getController();
+  public ProfileController getRegisterController() {
+    return (ProfileController)getRegisterView().getController();
   }
 
   @Bean
@@ -95,8 +91,4 @@ public class ControllersConfig {
     return (ProposalController)getProposalDataView().getController();
   }
 
-  @Bean
-  public EditProfileController getEditProfileController() {
-    return (EditProfileController)getEditProfileView().getController();
-  }
 }

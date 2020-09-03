@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.Provider;
-import java.security.Security;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -36,6 +35,7 @@ import org.bouncycastle.util.CollectionStore;
 import org.springframework.stereotype.Service;
 import ru.CryptoPro.CAdES.CAdESSignature;
 import ru.CryptoPro.CAdES.CAdESType;
+import ru.CryptoPro.JCP.JCP;
 import ru.monsterdev.mosregtrader.model.CertificateInfo;
 import ru.monsterdev.mosregtrader.services.CryptoService;
 
@@ -89,18 +89,19 @@ public class CryptoServiceImpl implements CryptoService {
 
     try {
       /* используется провайдер JCP от КриптоПРО */
+      Provider jcpProvider = new JCP();
       // получаем список типов ключевых хранилищ, доступных через провайдер JCP
-      List<String> keyStoreTypes = getKeyStoreTypesForProvider(Security.getProvider("JCP"));
+      List<String> keyStoreTypes = getKeyStoreTypesForProvider(jcpProvider);
       /* формируем список сертификатов, содержащихся в хранилищах */
       for (String keyStoreType : keyStoreTypes) {
-        KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+        KeyStore keyStore = KeyStore.getInstance(keyStoreType, jcpProvider.getName());
         keyStore.load(null, null);
         Enumeration<String> aliases = keyStore.aliases();
         while (aliases.hasMoreElements()) {
           String alias = aliases.nextElement();
           if (keyStore.isKeyEntry(alias)) {
             java.security.cert.Certificate cert = keyStore.getCertificate(alias);
-            if (cert.getType().equals("X.509")) {
+            if (cert != null && cert.getType().equals("X.509")) {
               X509Certificate x509Certificate = (X509Certificate) cert;
               X500Name x500Name = new JcaX509CertificateHolder(x509Certificate).getSubject();
               RDN cn = x500Name.getRDNs(BCStyle.CN)[0];
@@ -140,6 +141,12 @@ public class CryptoServiceImpl implements CryptoService {
         .filter(certificate -> certificate.getHash().equalsIgnoreCase(hashCode))
         .findFirst()
         .orElse(null);
+  }
+
+  @Override
+  public void reloadCertificateInfos() {
+    certificateInfos = null;
+    loadCertificateList();
   }
 
   private AttributeTable getSomeSignedAttributes(boolean signTime, boolean email) {

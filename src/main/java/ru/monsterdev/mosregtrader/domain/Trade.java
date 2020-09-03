@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -14,9 +16,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import lombok.Data;
+import ru.monsterdev.mosregtrader.enums.ReducePriceType;
 import ru.monsterdev.mosregtrader.enums.TradeStatus;
-import ru.monsterdev.mosregtrader.model.StatusFilterOption;
-import ru.monsterdev.mosregtrader.model.TradeFilter;
 import ru.monsterdev.mosregtrader.model.dto.ProductDto;
 
 /**
@@ -132,6 +133,16 @@ public class Trade {
 
   @Transient
   private Boolean updated = false;
+
+  @Column(name = "reduce_type")
+  @Enumerated(value = EnumType.STRING)
+  private ReducePriceType reduceType;
+
+  @Column(name = "absolute_reduce_value")
+  private BigDecimal absoluteReduceValue;
+
+  @Column(name = "relative_reduce_value")
+  private BigDecimal relativeReduceValue;
 
   /**
    * Возвращает признак завершения торгов по закупке

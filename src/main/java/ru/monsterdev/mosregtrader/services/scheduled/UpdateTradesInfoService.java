@@ -22,7 +22,7 @@ public class UpdateTradesInfoService implements Runnable {
   @Override
   public void run() {
     try {
-      log.info("Time to update trades");
+      log.info("Автоматическое обновление информации по закупкам");
       if (!LicenseUtil.checkDateLimit(LocalDate.now())) {
         throw new MosregTraderException("Закончился срок действия лицензии");
       }
@@ -30,9 +30,9 @@ public class UpdateTradesInfoService implements Runnable {
           .filter(trade -> trade.getFilterStatus() != TradeStatus.ARCHIVED
               && trade.getFilterStatus() != TradeStatus.CLOSED)
           .collect(Collectors.toList());
-      log.info("It was found {} trades for update: {}", trades.size(), trades);
+      log.info("Будет обновлена информация по {} закупкам: {}", trades.size(), trades);
       tradeService.updateTrades(trades);
-      log.info("Trades updated successfully");
+      log.info("Информация по всем закупкам обновлена успешно");
     } catch (Exception ex) {
       log.error("Trades updated with error", ex);
     }

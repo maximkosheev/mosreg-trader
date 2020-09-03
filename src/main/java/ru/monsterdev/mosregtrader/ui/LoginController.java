@@ -21,6 +21,7 @@ import ru.monsterdev.mosregtrader.model.CertificateInfo;
 import ru.monsterdev.mosregtrader.services.CryptoService;
 import ru.monsterdev.mosregtrader.services.UserService;
 import ru.monsterdev.mosregtrader.tasks.LoginTask;
+import ru.monsterdev.mosregtrader.ui.ProfileController.ShowMode;
 import ru.monsterdev.mosregtrader.ui.control.PasswordDialog;
 import ru.monsterdev.mosregtrader.ui.control.WaitIndicator;
 import ru.monsterdev.mosregtrader.utils.LicenseUtil;
@@ -81,7 +82,7 @@ public class LoginController extends AbstractUIController {
 
   @FXML
   private void onRegister() {
-    uiDispatcher.showRegisterUI();
+    uiDispatcher.showProfileUI(ShowMode.REGISTER);
   }
 
   private CertificateInfo waitCertificateAvailable(String certHash, String certName) {

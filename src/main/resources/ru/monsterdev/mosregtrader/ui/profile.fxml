@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.text.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+
+<GridPane fx:id="rootPane" hgap="10.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="700.0" prefWidth="600.0" vgap="10.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.monsterdev.mosregtrader.ui.ProfileController">
+  <columnConstraints>
+    <ColumnConstraints hgrow="SOMETIMES" maxWidth="169.0" minWidth="10.0" percentWidth="30.0" prefWidth="200.0" />
+    <ColumnConstraints hgrow="SOMETIMES" maxWidth="220.0" minWidth="10.0" prefWidth="206.0" />
+      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+  </columnConstraints>
+  <rowConstraints>
+    <RowConstraints maxHeight="-Infinity" minHeight="10.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+    <RowConstraints maxHeight="-Infinity" minHeight="10.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="-Infinity" minHeight="10.0" vgrow="SOMETIMES" />
+  </rowConstraints>
+   <children>
+      <Text fx:id="lblCaption" strokeType="OUTSIDE" strokeWidth="0.0" text="Регистрация пользователя" GridPane.columnSpan="2" GridPane.halignment="LEFT" GridPane.valignment="TOP">
+         <font>
+            <Font name="Tahoma" size="24.0" />
+         </font>
+      </Text>
+      <Label text="Наименование*" GridPane.halignment="RIGHT" GridPane.rowIndex="2" />
+      <TextField fx:id="edtName" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+      <Label text="Использовать НДС" GridPane.halignment="RIGHT" GridPane.rowIndex="17" />
+      <Label text="НДС" GridPane.halignment="RIGHT" GridPane.rowIndex="18" />
+      <CheckBox fx:id="chbNDS" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" GridPane.columnIndex="1" GridPane.rowIndex="17" />
+      <ComboBox fx:id="cmbNDS" prefWidth="150.0" GridPane.columnIndex="1" GridPane.rowIndex="18" />
+      <Label text="Сертификат*" GridPane.halignment="RIGHT" GridPane.rowIndex="6" />
+      <TextField fx:id="edtCertificate" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+      <Button fx:id="btnCertSelect" mnemonicParsing="false" onAction="#onSelectCert" text="Выбрать..." GridPane.columnIndex="2" GridPane.rowIndex="6" />
+      <HBox alignment="CENTER_RIGHT" spacing="5.0" GridPane.columnIndex="2" GridPane.rowIndex="19">
+         <children>
+            <Button fx:id="btnOk" mnemonicParsing="false" text="Регистрация" />
+            <Button fx:id="btnCancel" mnemonicParsing="false" text="Отмена" />
+         </children>
+      </HBox>
+      <Label text="Email*" GridPane.halignment="RIGHT" GridPane.rowIndex="7" />
+      <Label text="Факс" GridPane.halignment="RIGHT" GridPane.rowIndex="8" />
+      <Label text="Телефон*" GridPane.halignment="RIGHT" GridPane.rowIndex="9" />
+      <Label text="Фамилия*" GridPane.halignment="RIGHT" GridPane.rowIndex="3" />
+      <Label text="Имя*" GridPane.halignment="RIGHT" GridPane.rowIndex="4" />
+      <Label text="Отчество*" GridPane.halignment="RIGHT" GridPane.rowIndex="5" />
+      <TextField fx:id="edtEmail" GridPane.columnIndex="1" GridPane.rowIndex="7" />
+      <TextField fx:id="edtFax" GridPane.columnIndex="1" GridPane.rowIndex="8" />
+      <TextField fx:id="edtPhone" GridPane.columnIndex="1" GridPane.rowIndex="9" />
+      <TextField fx:id="edtSurname" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+      <TextField fx:id="edtFirstName" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+      <TextField fx:id="edtFatherName" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+      <Label text="Информация о пользователе" GridPane.columnSpan="3" GridPane.rowIndex="1">
+         <font>
+            <Font name="Tahoma Bold" size="14.0" />
+         </font>
+      </Label>
+      <Label text="Реквизиты банка" GridPane.columnSpan="3" GridPane.rowIndex="10">
+         <font>
+            <Font name="Tahoma Bold" size="14.0" />
+         </font>
+      </Label>
+      <Label text="Наименование банка*" GridPane.halignment="RIGHT" GridPane.rowIndex="11" />
+      <Label text="БИК банка*" GridPane.halignment="RIGHT" GridPane.rowIndex="12" />
+      <Label text="Корреспонденский счёт*" GridPane.halignment="RIGHT" GridPane.rowIndex="13" />
+      <Label text="Расчётный счёт*" GridPane.halignment="RIGHT" GridPane.rowIndex="14" />
+      <Label text="Лицевой счёт" GridPane.halignment="RIGHT" GridPane.rowIndex="15" />
+      <TextField fx:id="edtBankName" GridPane.columnIndex="1" GridPane.rowIndex="11" />
+      <TextField fx:id="edtBik" GridPane.columnIndex="1" GridPane.rowIndex="12" />
+      <TextField fx:id="edtCorrespondentAccount" GridPane.columnIndex="1" GridPane.rowIndex="13" />
+      <TextField fx:id="edtCheckingAccount" GridPane.columnIndex="1" GridPane.rowIndex="14" />
+      <TextField fx:id="edtPersonalAccount" GridPane.columnIndex="1" GridPane.rowIndex="15" />
+      <Label text="НДС" GridPane.rowIndex="16">
+         <font>
+            <Font name="Tahoma Bold" size="14.0" />
+         </font>
+      </Label>
+   </children>
+   <padding>
+      <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+   </padding>
+</GridPane>

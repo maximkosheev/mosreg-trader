@@ -11,6 +11,9 @@ create table trades (
   activate_time bigint not null,
   min_val decimal(11,2) not null,
   start_price decimal(11,2) not null,
+  reduce_type varchar(20) not null,
+  absolute_reduce_value decimal(11,2) null,
+  relative_reduce_value decimal(11,2) null,
   is_archived boolean null default false,
   user_id bigint
 );
@@ -28,7 +31,12 @@ create table users (
   fathername varchar(20) not null,
   fax varchar(25),
   phone varchar(25) not null,
-  use_nds boolean not null
+  use_nds boolean not null,
+  bik varchar(15) not null,
+  bank_name varchar(255) not null,
+  correspondent_account varchar(20) not null,
+  checking_account varchar(20) not null,
+  personal_account varchar(20) not null
 );
 
 alter table users add constraint uk_user_name unique (name);

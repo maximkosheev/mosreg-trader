@@ -10,4 +10,9 @@ public abstract class AbstractUIController implements UIController {
   public void bootstrap() {
     //
   }
+
+  @Override
+  public void bootstrap(Object params) {
+    //
+  }
 }

@@ -50,6 +50,7 @@ import ru.monsterdev.mosregtrader.services.scheduled.SubmitProposalService;
 import ru.monsterdev.mosregtrader.services.scheduled.UpdateProposalsPrice;
 import ru.monsterdev.mosregtrader.services.scheduled.UpdateTradesInfoService;
 import ru.monsterdev.mosregtrader.tasks.UpdateTradesInfoTask;
+import ru.monsterdev.mosregtrader.ui.ProfileController.ShowMode;
 import ru.monsterdev.mosregtrader.ui.control.WaitIndicator;
 import ru.monsterdev.mosregtrader.ui.model.ProposalViewItem;
 import ru.monsterdev.mosregtrader.utils.LicenseUtil;
@@ -102,6 +103,7 @@ public class MainController extends AbstractUIController {
   @Autowired
   private UIDispatcher uiDispatcher;
   private TradeFilter filterOptions = new TradeFilter();
+  private long totalTradesCount = 0;
   @Autowired
   private TradeService tradeService;
   @Autowired
@@ -127,14 +129,16 @@ public class MainController extends AbstractUIController {
 
     cmbItemsPerPage.getItems().addAll(5, 10, 20, 50, 100);
     cmbItemsPerPage.setValue(10);
-    cmbItemsPerPage.setOnAction(event -> webEngine.reload());
+    cmbItemsPerPage.setOnAction(event -> {
+      updatePagination(tradeService.findAll(filterOptions));
+      webEngine.reload();
+    });
 
     webEngine = mainView.getEngine();
     webEngine.getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
       if (newValue == Worker.State.SUCCEEDED) {
-        List<Trade> filteredTrades = filterTrades();
-        updatePagination(filteredTrades);
-        printProposals(filteredTrades);
+        log.debug("Страница загрузилась, отображаю информацию по закупкам c учетом фильтра {}", filterOptions);
+        printProposals(pagingTrades(tradeService.findAll(filterOptions)));
       }
     });
     JSObject window = (JSObject) webEngine.executeScript("window");
@@ -151,6 +155,8 @@ public class MainController extends AbstractUIController {
     lblStatusText.setText(IDLE_MSG);
     cmbFilters.getItems().clear();
     cmbFilters.getItems().addAll(dictionaryService.findAllFilters(FilterType.PROPOSAL));
+
+    updatePagination(tradeService.findAll(filterOptions));
 
     webEngine.load(getClass().getResource("/ru/monsterdev/mosregtrader/ui/mainView.html").toExternalForm());
 
@@ -186,17 +192,18 @@ public class MainController extends AbstractUIController {
     }
   }
 
-  private List<Trade> filterTrades() {
+  private List<Trade> pagingTrades(List<Trade> trades) {
     int countPerPage = cmbItemsPerPage.getValue();
     int startIndex = pages.getCurrentPageIndex() * countPerPage;
-    // выборка закупок в соответствии с фильтром и текущей страницей
-    return tradeService.findAll(filterOptions).stream()
-        .skip(startIndex).limit(startIndex + countPerPage)
+    return trades.stream()
+        .skip(startIndex).limit(countPerPage)
         .collect(Collectors.toList());
   }
 
   private void printProposals(List<Trade> trades) {
-    List<ProposalViewItem> items = trades.stream().map(ProposalViewItem::new).collect(Collectors.toList());
+    List<ProposalViewItem> items = trades.stream()
+        .map(ProposalViewItem::new)
+        .collect(Collectors.toList());
 
     JSObject mainView = (JSObject) webEngine.executeScript("mainView");
     mainView.call("clearProposals");
@@ -205,8 +212,11 @@ public class MainController extends AbstractUIController {
   }
 
   private void updatePagination(List<Trade> filteredTrades) {
+    pages.currentPageIndexProperty().removeListener(currentPageChangeListener);
+    pages.setCurrentPageIndex(0);
     lblTradesCount.setText(String.valueOf(filteredTrades.size()));
     pages.setPageCount(Math.floorDiv(filteredTrades.size(), cmbItemsPerPage.getValue()) + 1);
+    pages.currentPageIndexProperty().addListener(currentPageChangeListener);
   }
 
   @FXML
@@ -233,18 +243,25 @@ public class MainController extends AbstractUIController {
     }
     try {
       lockUI();
-      List<Trade> filteredTrades = filterTrades();
+      List<Trade> filteredTrades = pagingTrades(tradeService.findAll(filterOptions));
+      log.debug("Обноление информации по закупкам на станице {}, {}", pages.getCurrentPageIndex(),
+          filteredTrades);
 
-      UpdateTradesInfoTask updateTradesInfoTask = applicationContext.getBean(UpdateTradesInfoTask.class, tradeService,
+      UpdateTradesInfoTask updateTradesInfoTask = applicationContext.getBean(
+          UpdateTradesInfoTask.class,
+          tradeService,
           filteredTrades);
 
       updateTradesInfoTask.setOnFailed(event -> {
+        log.error("Произошла ошибка обновления информации о закупках: ",
+            updateTradesInfoTask.getException());
         releaseUI();
         lblStatusText.setText(ERROR_MSG);
         UIController.showErrorMessage(updateTradesInfoTask.getException().getMessage());
       });
 
       updateTradesInfoTask.setOnSucceeded(event -> {
+        log.debug("Обновление информации по закупкам на странице прошло успешно. Перерисовка...");
         webEngine.reload();
         lblStatusText.setText(IDLE_MSG);
       });
@@ -297,6 +314,9 @@ public class MainController extends AbstractUIController {
         trade.setMinTradeVal(proposalData.getMinTradeVal());
         trade.setStartPrice(Objects.isNull(proposalData.getStartTradeVal()) ? tradeInfo.getInitialPrice()
             : proposalData.getStartTradeVal());
+        trade.setReduceType(proposalData.getReducePriceType());
+        trade.setAbsoluteReduceValue(proposalData.getAbsoluteReduceValue());
+        trade.setRelativeReduceValue(proposalData.getRelativeReduceValue());
         tradeService.addTrade(trade);
       }
       refreshPage();
@@ -326,14 +346,19 @@ public class MainController extends AbstractUIController {
         throw new MosregTraderException("Выберете закупки, которые нужно редактировать, а затем повторите операцию");
       }
 
-      Optional<ProposalData> proposalData = uiDispatcher.showProposalDataUI();
-      if (!proposalData.isPresent()) {
+      Optional<ProposalData> optProposalData = uiDispatcher.showProposalDataUI();
+      if (!optProposalData.isPresent()) {
         return;
       }
+      ProposalData proposalData = optProposalData.get();
+
       for (Trade trade : selectedTrades) {
-        trade.setMinTradeVal(proposalData.get().getMinTradeVal());
-        trade.setStartPrice(proposalData.get().getStartTradeVal());
-        trade.setActivateTime(proposalData.get().getActivateTime());
+        trade.setMinTradeVal(proposalData.getMinTradeVal());
+        trade.setStartPrice(proposalData.getStartTradeVal());
+        trade.setActivateTime(proposalData.getActivateTime());
+        trade.setReduceType(proposalData.getReducePriceType());
+        trade.setAbsoluteReduceValue(proposalData.getAbsoluteReduceValue());
+        trade.setRelativeReduceValue(proposalData.getRelativeReduceValue());
         tradeService.saveTrade(trade);
       }
       refreshPage();
@@ -391,7 +416,7 @@ public class MainController extends AbstractUIController {
 
   @FXML
   private void onProfile() {
-    uiDispatcher.showEditProfileUI();
+    uiDispatcher.showProfileUI(ShowMode.EDIT);
   }
 
   @FXML
@@ -403,9 +428,8 @@ public class MainController extends AbstractUIController {
   private void onFilterApply() {
     lockUI();
     prepareFilterOptions();
-    pages.currentPageIndexProperty().removeListener(currentPageChangeListener);
-    pages.setCurrentPageIndex(0);
-    pages.currentPageIndexProperty().addListener(currentPageChangeListener);
+    log.debug("Применение фильтра {}", filterOptions);
+    updatePagination(tradeService.findAll(filterOptions));
     webEngine.reload();
   }
 

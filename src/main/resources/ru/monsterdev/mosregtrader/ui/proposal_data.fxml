@@ -5,17 +5,62 @@
 <?import java.lang.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox fx:id="rootPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="245.0" prefWidth="403.0" spacing="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.monsterdev.mosregtrader.ui.ProposalController">
+<VBox fx:id="rootPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="400.0" spacing="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.monsterdev.mosregtrader.ui.ProposalController">
    <children>
-      <Label text="Минимальное предложение цены (МПЦ) (р.)*" VBox.vgrow="NEVER" />
-      <TextField fx:id="edtMinTradeVal" promptText="МПЦ" VBox.vgrow="NEVER" />
-      <Label text="Начальное предложение цены (р.)" />
-      <Label text="(если не задано, то используется НМЦ)" />
-      <TextField fx:id="edtStartTradeVal" promptText="Начальная цена" />
-      <Label text="Время активации (мин.)" />
-      <Label text="(если не задано, то заявка активируется сразу)" />
-      <TextField fx:id="edtActivateTime" promptText="Время активации" />
-      <HBox alignment="CENTER_RIGHT" prefHeight="62.0" prefWidth="393.0" spacing="5.0" VBox.vgrow="NEVER">
+      <TitledPane animated="false" collapsible="false" text="Минимальное предложение цены (МПЦ) (р.)*" underline="true">
+         <content>
+            <VBox prefHeight="0.0" prefWidth="391.0">
+               <children>
+                  <TextField fx:id="edtMinTradeVal" promptText="МПЦ" VBox.vgrow="NEVER" />
+               </children>
+            </VBox>
+         </content>
+      </TitledPane>
+      <TitledPane animated="false" collapsible="false" layoutX="15.0" layoutY="184.0" text="Снижение цены*" underline="true">
+         <content>
+            <VBox prefHeight="0.0" prefWidth="391.0" spacing="5.0">
+               <children>
+                  <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="25.0">
+                     <children>
+                        <RadioButton fx:id="optAbsoluteReduce" mnemonicParsing="false" text="Абсолютное значение (р)">
+                           <toggleGroup>
+                              <ToggleGroup fx:id="reduceType" />
+                           </toggleGroup>
+                        </RadioButton>
+                        <TextField fx:id="edtAbsoluteReduceValue" disable="true" promptText="Абсолютное значение" />
+                     </children>
+                  </HBox>
+                  <HBox alignment="CENTER_LEFT" layoutX="20.0" layoutY="20.0" prefHeight="100.0" prefWidth="200.0" spacing="5.0">
+                     <children>
+                        <RadioButton fx:id="optRelativeReduce" mnemonicParsing="false" text="Относительное значение (%)" toggleGroup="$reduceType" />
+                        <TextField fx:id="edtRelativeReduceValue" disable="true" promptText="Относильное значение" />
+                     </children>
+                  </HBox>
+               </children>
+            </VBox>
+         </content>
+      </TitledPane>
+      <TitledPane animated="false" collapsible="false" layoutX="15.0" layoutY="15.0" text="Начальное предложение цены (р.)" underline="true">
+         <content>
+            <VBox prefHeight="0.0" prefWidth="391.0" spacing="5.0">
+               <children>
+                  <TextField fx:id="edtStartTradeVal" promptText="Начальная цена" />
+                  <Label text="(если не задано, то используется НМЦ)" />
+               </children>
+            </VBox>
+         </content>
+      </TitledPane>
+      <TitledPane animated="false" collapsible="false" layoutX="15.0" layoutY="15.0" text="Время активации (мин.)" underline="true">
+         <content>
+            <VBox prefHeight="0.0" prefWidth="391.0" spacing="5.0">
+               <children>
+                  <TextField fx:id="edtActivateTime" promptText="Время активации" />
+                  <Label text="(если не задано, то заявка активируется сразу)" />
+               </children>
+            </VBox>
+         </content>
+      </TitledPane>
+      <HBox alignment="CENTER_RIGHT" prefHeight="35.0" prefWidth="393.0" spacing="5.0" VBox.vgrow="NEVER">
          <children>
             <Button fx:id="btnOk" defaultButton="true" mnemonicParsing="false" onAction="#onOk" text="Принять" />
             <Button fx:id="btnCancel" cancelButton="true" mnemonicParsing="false" onAction="#onCancel" text="Отмена" />

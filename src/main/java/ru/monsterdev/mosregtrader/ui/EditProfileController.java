@@ -135,7 +135,6 @@ public class EditProfileController extends AbstractUIController {
     close();
   }
 
-
   private Stage getStage() {
     return (Stage)rootPane.getScene().getWindow();
   }

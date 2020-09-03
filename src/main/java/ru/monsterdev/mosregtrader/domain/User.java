@@ -56,6 +56,21 @@ public class User {
   @Column(name = "cert_hash")
   private String certHash;
 
+  @Column(name = "bik")
+  private String bik;
+
+  @Column(name = "checking_account")
+  private String checkingAccount;
+
+  @Column(name = "correspondent_account")
+  private String correspondentAccount;
+
+  @Column(name = "bank_name")
+  private String bankName;
+
+  @Column(name = "personal_account")
+  private String personalAccount;
+
   @Temporal(TemporalType.TIMESTAMP)
   @Column(name = "create_dt", updatable = false)
   private Date createDT;
@@ -73,6 +88,11 @@ public class User {
     result.setEmail(email);
     result.setPhone(phone);
     result.setFax(fax);
+    result.setBik(bik);
+    result.setCheckingAccount(checkingAccount);
+    result.setCorrespondentAccount(correspondentAccount);
+    result.setBankName(bankName);
+    result.setPersonalAccount(personalAccount);
     return result;
   }
 }

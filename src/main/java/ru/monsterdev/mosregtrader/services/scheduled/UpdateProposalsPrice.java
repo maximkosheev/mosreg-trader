@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import ru.monsterdev.mosregtrader.domain.Trade;
+import ru.monsterdev.mosregtrader.enums.ProposalStatus;
 import ru.monsterdev.mosregtrader.enums.TradeStatus;
 import ru.monsterdev.mosregtrader.exceptions.MosregTraderException;
 import ru.monsterdev.mosregtrader.services.TradeService;
@@ -35,7 +36,6 @@ public class UpdateProposalsPrice implements Runnable {
   @Override
   public void run() {
     try {
-      log.info("Time to update proposals price");
       if (!LicenseUtil.checkDateLimit(LocalDate.now())) {
         throw new MosregTraderException("Закончился срок действия лицензии");
       }
@@ -46,12 +46,15 @@ public class UpdateProposalsPrice implements Runnable {
           .filter(trade -> {
             long duration = Duration.between(now, trade.getEndDT()).toMillis();
             return (duration > 0 && duration <= remainedLimit) &&
+                (trade.getStatus() == TradeStatus.SUGGESTIONS) &&
                 (trade.getProposal() != null) &&
-                (trade.getStatus() == TradeStatus.SUGGESTIONS);
+                (trade.getProposal().getStatus() == ProposalStatus.ACTIVE);
           })
           .collect(Collectors.toList());
-      log.debug("It was found {} trades for trade: {}", trades.size(), trades);
-      tradeService.updateProposalsPrice(trades);
+      if (!trades.isEmpty()) {
+        log.debug("It was found {} trades for trade: {}", trades.size(), trades);
+        tradeService.updateProposalsPrice(trades);
+      }
       log.info("Proposals updated successfully");
     } catch (Exception ex) {
       log.error("Proposals updated with error", ex);
